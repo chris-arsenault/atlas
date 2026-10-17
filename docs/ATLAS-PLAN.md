@@ -8,6 +8,10 @@ independently scheduled Ahara pipelines. PostgreSQL, PostGIS, API services, and
 runtime tile servers from the supplied design are replaced by published static
 files. CI tests and deploys code; it does not operate the production data pipeline.
 
+The shared Ahara OG server supplies the HTML shell with static site metadata and
+a preview image for crawlers. It does not read or query the language data; browser
+assets and published datasets continue to use their S3 origins.
+
 This document is the working implementation contract. The supplied design is at
 `.sulion-paste/paste-2026-10-17T03-26-19-278Z.txt`; that directory must stay private
 and excluded from future commits and site builds. The repository currently has

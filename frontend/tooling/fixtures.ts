@@ -1,6 +1,6 @@
 /** Synthetic browser cases. Generated release files never enter source control. */
 import { createHash } from "node:crypto";
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { cpSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import type { History, Languoid, ObservationDetail, Dating } from "../src/data/schema";
 
@@ -141,6 +141,7 @@ function artifactWriter(
   };
 }
 export function prepareFixture() {
+  cpSync(resolve("public"), output, { recursive: true });
   const release = "000000000000000000000001";
   const directory = resolve(output, `data/v1/releases/${release}`);
   const history = historical(),

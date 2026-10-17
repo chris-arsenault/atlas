@@ -149,7 +149,17 @@ module "website" {
   spa_fallback               = false
   response_headers_policy_id = aws_cloudfront_response_headers_policy.security.id
   data_origin                = { domain_name = aws_s3_bucket.data.bucket_regional_domain_name, origin_path = "/published" }
-  invalidation_paths         = ["/", "/index.html", "/config.js", "/assets/*"]
+  invalidation_paths         = ["/", "/index.html", "/config.js", "/assets/*", "/favicon*", "/apple-touch-icon.png", "/icon-192.png", "/icon-512.png", "/manifest.webmanifest", "/og-image.png"]
+  vpc                        = module.ctx.vpc
+  og_artifact                = module.ctx.og_server
+  og_config = {
+    site_name = "Atlas"
+    defaults = {
+      title       = "Languages across place and time"
+      description = "Explore language distributions and ancestry, with the evidence kept in view."
+      image       = "/og-image.png"
+    }
+  }
 }
 output "workflow_arn" { value = module.languages.workflow_arn }
 output "data_bucket" { value = aws_s3_bucket.data.id }

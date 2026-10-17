@@ -4,6 +4,11 @@ Static language geography, genealogy and historical evidence on Ahara. React,
 MapLibre and D3 run in the browser. S3/CloudFront serve application assets and
 independently produced data; the application has no backend request path.
 
+Ahara's shared OG server supplies the HTML shell and social preview tags using
+static site metadata. Icons and the preview image live in `frontend/public/`;
+the application and datasets still load directly from S3 through CloudFront.
+The OG server does not query a database or process Atlas data.
+
 The data pipeline is EventBridge Scheduler → Step Functions Standard → Python
 Lambda. Ahara owns the shared DynamoDB registration/status tables, status
 recorder and central observability. Atlas owns the workflow, worker, sources,

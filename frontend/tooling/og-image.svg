@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <rect width="1200" height="630" fill="#f5f2e9"/>
+  <path d="M0 608h1200" stroke="#d6d9ce"/>
+  <g fill="#213b40">
+    <text x="74" y="215" font-family="Georgia, serif" font-size="150" letter-spacing="-8">atlas</text>
+    <text x="80" y="316" font-family="Georgia, serif" font-size="48">Languages across</text>
+    <text x="80" y="377" font-family="Georgia, serif" font-size="48">place &amp; time.</text>
+    <g font-family="Arial, sans-serif" font-size="22" fill="#697979">
+      <text x="82" y="440">Geography, ancestry, and historical evidence.</text>
+      <text x="82" y="555" font-size="20" letter-spacing="2">atlas.ahara.io / AHARA</text>
+    </g>
+  </g>
+  <g transform="translate(418 112)" stroke="#bd7139" stroke-width="3" stroke-linecap="round">
+    <path d="M0-25v50M-25 0h50M-18-18l36 36M-18 18l36-36"/>
+  </g>
+  <g transform="translate(915 310)">
+    <circle r="196" fill="#e4eae0" stroke="#b8cbbd" stroke-width="2"/>
+    <g fill="none" stroke="#b8cbbd" stroke-width="1.5">
+      <ellipse rx="112" ry="196"/>
+      <ellipse rx="43" ry="196"/>
+      <ellipse rx="196" ry="62"/>
+      <path d="M-169-98Q0-145 169-98M-169 98Q0 145 169 98"/>
+      <path d="M-196 0h392M0-196v392"/>
+    </g>
+    <g fill="none" stroke="#357a71" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M-116 76L-54 18L16-26L92-82M16-26L91 37L145 84M-54 18L-85-75L-42-130M91 37L88 128"/>
+    </g>
+    <g fill="#357a71" stroke="#f5f2e9" stroke-width="4">
+      <circle cx="-116" cy="76" r="9"/>
+      <circle cx="-54" cy="18" r="9"/>
+      <circle cx="16" cy="-26" r="9"/>
+      <circle cx="92" cy="-82" r="9"/>
+      <circle cx="91" cy="37" r="9"/>
+      <circle cx="145" cy="84" r="9"/>
+      <circle cx="-85" cy="-75" r="9"/>
+      <circle cx="-42" cy="-130" r="9"/>
+      <circle cx="88" cy="128" r="9"/>
+    </g>
+  </g>
+</svg>
