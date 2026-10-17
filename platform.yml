@@ -1,0 +1,16 @@
+project: atlas
+prefix: atlas
+stack:
+  - typescript
+  - python
+  - terraform
+typescript_dir: frontend
+python_dir: tools/data
+python_source_dir: .
+browser_tests:
+  engines: [chromium, firefox, webkit]
+observability:
+  dashboards:
+    path: dashboards
+    folder_uid: atlas
+    folder_title: Atlas

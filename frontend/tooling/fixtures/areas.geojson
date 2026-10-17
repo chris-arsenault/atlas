@@ -1,0 +1,110 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "fixture:contemporary:bengali",
+        "subject": "beng1280",
+        "family": "indo1319",
+        "kind": "language"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [88, 20],
+            [93, 20],
+            [93, 27],
+            [88, 27],
+            [88, 20]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "fixture:contemporary:overlap",
+        "subject": "fixture:overlap",
+        "family": "indo1319",
+        "kind": "language"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [88, 20],
+            [93, 20],
+            [93, 27],
+            [88, 27],
+            [88, 20]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "fixture:traditional:bengali",
+        "subject": "beng1280",
+        "family": "indo1319",
+        "kind": "language"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [88, 20],
+            [93, 20],
+            [93, 27],
+            [88, 27],
+            [88, 20]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "fixture:traditional:overlap",
+        "subject": "fixture:overlap",
+        "family": "indo1319",
+        "kind": "language"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [88, 20],
+            [93, 20],
+            [93, 27],
+            [88, 27],
+            [88, 20]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "fixture:contemporary:basque",
+        "subject": "basq1248",
+        "family": "basq1248",
+        "kind": "language"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [-3, 42],
+            [0, 42],
+            [0, 44],
+            [-3, 44],
+            [-3, 42]
+          ]
+        ]
+      }
+    }
+  ]
+}

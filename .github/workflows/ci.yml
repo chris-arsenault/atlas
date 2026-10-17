@@ -1,0 +1,40 @@
+name: CI
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+  workflow_call:
+    inputs:
+      deploy:
+        type: boolean
+        default: false
+      terraform_patterns_ref:
+        type: string
+        default: ""
+      terraform_variables:
+        type: string
+        default: "{}"
+permissions:
+  contents: read
+  actions: read
+  id-token: write
+jobs:
+  application:
+    needs: pipeline-code
+    uses: chris-arsenault/ahara/.github/workflows/ci.yml@main
+    with:
+      deploy: ${{ inputs.deploy || false }}
+      terraform_patterns_ref: ${{ inputs.terraform_patterns_ref || '' }}
+      terraform_variables: ${{ inputs.terraform_variables || '{}' }}
+    secrets: inherit
+  pipeline-code:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: astral-sh/setup-uv@v7
+        with:
+          version: "0.12.3"
+      - name: Check data adapters
+        run: make data-test

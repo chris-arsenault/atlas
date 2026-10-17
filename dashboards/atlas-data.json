@@ -1,0 +1,12 @@
+{
+  "uid": "atlas-data",
+  "title": "Atlas Data Pipeline",
+  "schemaVersion": 39,
+  "tags": ["atlas", "pipelines"],
+  "time": {"from": "now-7d", "to": "now"},
+  "refresh": "1m",
+  "panels": [
+    {"id": 1, "type": "logs", "title": "Worker stages and publication", "datasource": {"type": "loki", "uid": "loki"}, "gridPos": {"h": 12, "w": 24, "x": 0, "y": 0}, "targets": [{"refId": "A", "expr": "{project=\"atlas\",pipeline=\"languages\",event_name=\"atlas.data.stage\"}"}], "options": {"showTime": true}},
+    {"id": 2, "type": "logs", "title": "Workflow outcomes", "datasource": {"type": "loki", "uid": "loki"}, "gridPos": {"h": 10, "w": 24, "x": 0, "y": 12}, "targets": [{"refId": "A", "expr": "{project=\"atlas\",pipeline=\"languages\",event_name=\"pipeline.execution\"}"}], "options": {"showTime": true}}
+  ]
+}

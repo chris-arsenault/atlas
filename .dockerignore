@@ -1,0 +1,8 @@
+.git
+.sulion-paste
+.cache
+.ahara-tf-patterns
+**/.venv
+**/node_modules
+**/.terraform
+frontend

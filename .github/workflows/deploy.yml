@@ -1,0 +1,32 @@
+name: Deploy code
+on:
+  workflow_dispatch:
+    inputs:
+      patterns_ref:
+        description: Published ahara-tf-patterns commit containing the reviewed changes (40 hex characters)
+        required: true
+        type: string
+        default: 28308730650f7cdca12dac259bf2ff8f82ec2001
+      hostname:
+        description: Confirmed public hostname
+        required: true
+        type: string
+        default: atlas.ahara.io
+      schedule_enabled:
+        description: Enable the weekly data refresh schedule
+        type: boolean
+        default: false
+permissions:
+  contents: read
+  actions: read
+  id-token: write
+jobs:
+  deploy:
+    if: github.ref == 'refs/heads/main'
+    uses: ./.github/workflows/ci.yml
+    with:
+      deploy: true
+      terraform_patterns_ref: ${{ inputs.patterns_ref }}
+      terraform_variables: >-
+        {"hostname": ${{ toJSON(inputs.hostname) }}, "schedule_enabled": ${{ inputs.schedule_enabled }}}
+    secrets: inherit

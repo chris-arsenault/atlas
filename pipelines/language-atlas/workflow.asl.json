@@ -1,0 +1,29 @@
+{
+  "Comment": "Atlas-owned full-source build and publication. No CI refresh trigger.",
+  "StartAt": "CaptureSources",
+  "States": {
+    "CaptureSources": {
+      "Type": "Task", "Resource": "${worker_arn}",
+      "Parameters": {"stage":"fetch","run.$":"$$.Execution.Id"},
+      "Retry": [{"ErrorEquals":["Lambda.ServiceException","Lambda.AWSLambdaException","Lambda.SdkClientException"],"IntervalSeconds":5,"MaxAttempts":3,"BackoffRate":2}],
+      "Next": "ImportLayers"
+    },
+    "ImportLayers": {
+      "Type":"Map", "ItemsPath":"$.layers", "MaxConcurrency":2,
+      "ItemSelector":{"stage":"layer","run.$":"$.run","layer.$":"$$.Map.Item.Value"},
+      "ItemProcessor":{"ProcessorConfig":{"Mode":"INLINE"},"StartAt":"ImportAndTile","States":{
+        "ImportAndTile":{"Type":"Task","Resource":"${worker_arn}","Retry":[{"ErrorEquals":["Lambda.ServiceException","Lambda.AWSLambdaException","Lambda.SdkClientException"],"IntervalSeconds":5,"MaxAttempts":3,"BackoffRate":2}],"End":true}
+      }},
+      "ResultPath":"$.results", "Next":"AssembleAndValidate"
+    },
+    "AssembleAndValidate": {
+      "Type":"Task","Resource":"${worker_arn}","Parameters":{"stage":"assemble","run.$":"$.run"},
+      "Retry":[{"ErrorEquals":["Lambda.ServiceException","Lambda.AWSLambdaException","Lambda.SdkClientException"],"IntervalSeconds":5,"MaxAttempts":3,"BackoffRate":2}],
+      "Next":"PublishValidatedRelease"
+    },
+    "PublishValidatedRelease": {
+      "Type":"Task","Resource":"${worker_arn}","Parameters":{"stage":"publish","run.$":"$.run","release.$":"$.release"},
+      "Retry":[{"ErrorEquals":["Lambda.ServiceException","Lambda.AWSLambdaException","Lambda.SdkClientException"],"IntervalSeconds":5,"MaxAttempts":3,"BackoffRate":2}],"End":true
+    }
+  }
+}

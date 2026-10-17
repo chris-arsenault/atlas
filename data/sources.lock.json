@@ -1,0 +1,14 @@
+{
+  "schema": 1,
+  "sources": [
+    {"id":"glottolog","file":"glottolog.zip","version":"5.3","url":"https://cdstar.eva.mpg.de/bitstreams/EAEA0-608B-9919-A962-0/glottolog_languoid.csv.zip","sha256":"47fcc04c18f3f6bff43198b5be14f1f6954600c90573373df9ecf6fc12622bfb","license":"CC-BY-4.0","citation":"Hammarström, Forkel, Haspelmath & Bank. Glottolog 5.3.","reference":"https://glottolog.org/download"},
+    {"id":"glottolog-metadata","file":"glottolog-metadata.zip","version":"5.3","url":"https://codeload.github.com/glottolog/glottolog/zip/refs/tags/v5.3","sha256":"2d574e0ebf2a6cc82ffdfbd20faa1459336cfd60e8d72938f8171eab446b748b","license":"CC-BY-4.0","citation":"Glottolog 5.3 languoid metadata and alternative names.","reference":"https://github.com/glottolog/glottolog/tree/v5.3"},
+    {"id":"atlas","file":"atlas.zip","version":"2.0","url":"https://codeload.github.com/Glottography/asher2007world/zip/refs/tags/v2.0","sha256":"a8638c555ff3ac4d0e7af191e812cc0e316e1163a4bab9f75ecd945a11daed8a","license":"CC-BY-4.0","citation":"Glottography digitization of Asher & Moseley (eds.) 2007, Atlas of the World's Languages, 2nd edition. Release 2.0.","reference":"https://doi.org/10.5281/zenodo.18613195"},
+    {"id":"basemap","file":"basemap.geojson","version":"5.1.2","url":"https://raw.githubusercontent.com/nvkelso/natural-earth-vector/v5.1.2/geojson/ne_110m_admin_0_countries.geojson","sha256":"6866c877d39cba9c357620878839b336d569f8c662d3cfab4cb1dbe2d39c977f","license":"CC0-1.0","citation":"Natural Earth 1:110m countries, public domain.","reference":"https://www.naturalearthdata.com/about/terms-of-use/"}
+  ],
+  "historicalSources": [
+    {"id":"bouckaert","file":"bouckaert.zip","version":"1.2","url":"https://codeload.github.com/phlorest/bouckaert_et_al2012/zip/refs/tags/v1.2","sha256":"c02843ea414360d40a9c93faee0bf62d2c0dac8e0ce7aadf5c1da952021c425d","license":"CC-BY-4.0","citation":"Bouckaert et al. 2012. Mapping the Origins and Expansion of the Indo-European Language Family. Science 337:957–960. Phlorest derived dataset v1.2.","reference":"https://github.com/phlorest/bouckaert_et_al2012/tree/v1.2"},
+    {"id":"chang","file":"chang.zip","version":"1.2","url":"https://codeload.github.com/phlorest/chang_et_al2015/zip/refs/tags/v1.2","sha256":"8105a87febdee802a0c8f4da8ee9616f2d0a32d750ee56dd7964a838cf6b3d32","license":"CC-BY-4.0","citation":"Chang, Cathcart, Hall & Garrett. 2015. Ancestry-constrained phylogenetic analysis supports the Indo-European steppe hypothesis. Language 91:194–244. Phlorest derived dataset v1.2.","reference":"https://github.com/phlorest/chang_et_al2015/tree/v1.2"}
+  ],
+  "tools": {"tippecanoe":{"version":"2.79.0","url":"https://codeload.github.com/felt/tippecanoe/tar.gz/refs/tags/2.79.0","sha256":"b0fd9df49b6efc988288ea48774822c6de19eb48428017f27ee0b3b01d44f05d"}}
+}
