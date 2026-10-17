@@ -13,6 +13,13 @@ from .tiles import compile_tiles, inspect_tiles
 LAYERS = ("contemporary", "traditional")
 
 
+def build_fingerprint(root: Path):
+    return hashlib.sha256(
+        b"".join(path.read_bytes() for path in sorted(Path(__file__).parent.glob("*.py")))
+        + (root / "tools/data/uv.lock").read_bytes()
+    ).hexdigest()
+
+
 def prepare(root: Path, cache: Path):
     sources = read_json(root / "data/sources.lock.json")
     for source in source_list(root):
@@ -68,12 +75,7 @@ def assemble(root: Path, cache: Path, work: Path, destination: Path):
         for path in sorted(stage.rglob("*"))
         if path.is_file() and path.name != "manifest.json"
     }
-    build_code = hashlib.sha256(
-        b"".join(
-            path.read_bytes() for path in sorted((root / "tools/data/atlas_data").glob("*.py"))
-        )
-        + (root / "tools/data/uv.lock").read_bytes()
-    ).hexdigest()
+    build_code = build_fingerprint(root)
     manifest = {
         "schema": 1,
         "build": build_code,
