@@ -5,17 +5,6 @@ on:
   pull_request:
     branches: [main]
   workflow_dispatch:
-  workflow_call:
-    inputs:
-      deploy:
-        type: boolean
-        default: false
-      terraform_patterns_ref:
-        type: string
-        default: ""
-      terraform_variables:
-        type: string
-        default: "{}"
 permissions:
   contents: read
   actions: read
@@ -25,9 +14,7 @@ jobs:
     needs: pipeline-code
     uses: chris-arsenault/ahara/.github/workflows/ci.yml@main
     with:
-      deploy: ${{ inputs.deploy || false }}
-      terraform_patterns_ref: ${{ inputs.terraform_patterns_ref || '' }}
-      terraform_variables: ${{ inputs.terraform_variables || '{}' }}
+      terraform_patterns_ref: 28308730650f7cdca12dac259bf2ff8f82ec2001
     secrets: inherit
   pipeline-code:
     runs-on: ubuntu-latest

@@ -13,4 +13,3 @@ infrastructure belongs in Ahara; linguistic data processing belongs here.
   in ignored caches; `.sulion-paste` is private and never shipped.
 - `make ci` checks code with fixtures. `make data` independently builds the full
   pinned release locally. Neither command publishes to AWS.
-- Deployment, pushes, and hostname confirmation require separate authorization.

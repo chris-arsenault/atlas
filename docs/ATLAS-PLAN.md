@@ -248,7 +248,7 @@ in `AGENTS.md`.
 ### Atlas-owned configuration
 
 - Project and resource prefix: `atlas`; repository: `chris-arsenault/atlas`.
-  Proposed hostname: `atlas.ahara.io`, to be confirmed before deployment.
+  Public hostname: `atlas.ahara.io`.
 - `platform.yml`: `project: atlas`, `prefix: atlas`,
   `typescript_dir: frontend`, and frontend/Terraform stack entries. Atlas
   Terraform supplies its native workflow definition to the reusable client
@@ -295,9 +295,9 @@ in `AGENTS.md`.
   Use SSE-S3, as PDFree does, with `encrypt = false` to avoid a dedicated KMS
   key. Security headers must permit only necessary same-origin assets and
   MapLibre worker creation, verified against the production build.
-- The local deploy script builds, initializes Terraform, saves a concrete
-  plan, then applies it only within deployment authorization. CI uses its
-  own explicit build/init/apply steps rather than calling that script.
+- Ahara's shared workflow owns code builds, Terraform initialization and apply
+  on `main`. Atlas passes the pinned shared-module revision and inherits the
+  standard deployment behavior.
 
 ### Required changes outside Atlas
 
@@ -336,13 +336,9 @@ These are implementation prerequisites, not suggestions to defer into a README:
    No RDS database registration is needed; pipeline control metadata uses the
    shared registry contract.
 
-Implement these local cross-repository changes when implementation is authorized.
-Inspect each working tree and its applicable instructions first. Do not change
-unrelated work, create branches, apply infrastructure, or push without the
-corresponding authorization. Future publication order is shared
-service/permission prerequisites, shared client module, then Atlas. The
-deployer registration must be applied
-before the first Atlas deployment can authenticate.
+Publication order is shared service/permission prerequisites, shared client
+module, then Atlas. The deployer registration must be applied before the first
+Atlas deployment can authenticate.
 
 ### Cost and publication boundary
 
@@ -585,10 +581,10 @@ The removed custom HTTP harness previously simulated caching/security headers;
 those assertions were not evidence of CloudFront behavior. Its replacement uses
 Vite preview solely for built-application and binary-range journeys. Shared
 Terraform mock plans check cache/data-origin configuration, and actual response
-headers remain part of separately authorized post-deployment verification.
+headers remain part of post-deployment verification.
 
-Publication is a subsequent user-authorized action. When authorized, publish
-and apply the prerequisites in order, deploy Atlas, then verify HTTPS, actual
+Publish and apply the prerequisites in order. The shared workflow deploys Atlas
+on `main`; then verify HTTPS, actual
 range responses/tile decoding, browser behavior, source links, and release-cache
 behavior at the chosen hostname. Report live failures from actual logs. Local
 release readiness and successful live deployment are separate claims.
@@ -596,11 +592,11 @@ release readiness and successful live deployment are separate claims.
 ## Decisions and next action
 
 Shared-CI adoption uses Ahara's existing Python `scripts/build-lambda.sh` hook
-for ZIP packaging and its existing Terraform deployment step. Atlas's deploy
-workflow is only a caller; adapter tests gate it, and ordinary pushes keep
-deployment disabled. Optional Python paths preserve existing backend/src
-defaults. Optional shared-module SHA and public Terraform JSON values support
-the manual hostname/schedule inputs. Data refresh remains a separate execution.
+for ZIP packaging and its existing Terraform deployment step. Atlas's CI
+workflow is a caller; adapter and browser tests gate it, and pushes to `main`
+use the shared deployment defaults. The caller pins the shared-module SHA;
+Terraform owns hostname and schedule configuration. Optional Python paths
+preserve existing backend/src defaults. Data refresh remains a separate execution.
 
 Cleanup approved after implementation review: use a Python Lambda ZIP with
 Lambda-compatible native dependencies; remove production ECR/image support and
@@ -627,7 +623,7 @@ Lambda data preparation outside CI, browser queries, complete available global
 coverage, distinct source/temporal semantics,
 explicit evidence and alternatives, existing Ahara website/CI conventions.
 
-Provisional: `atlas.ahara.io`, Glottolog 5.3 + Atlas v2.0 with explicit
+Provisional: Glottolog 5.3 + Atlas v2.0 with explicit
 reconciliation, initial performance budgets, Natural Earth reference basemap,
 and PriceClass_100. Verify archive identity and joins in M1 and performance in
 M2. Adapt implementation from evidence without changing the static boundary
@@ -635,8 +631,6 @@ or dropping product requirements.
 
 Deferred decisions:
 
-- User owns hostname choice and external publication authorization. These block
-  deployment, not local implementation.
 - User owns any intended commercial use decision needed for CC BY-NC material.
   The implementation can proceed using permissively licensed sources; do not
   import the D-PLACE aggregate by default.
@@ -849,14 +843,10 @@ and failed with `No valid credential sources found`; that operation was stopped.
 
 ### Publication order and return to Atlas
 
-The current request authorizes all local implementation phases. Implementation
-prepares actual cross-repository changes, not documentation TODOs. Review existing
-working trees first; `ahara` already contains unrelated local modifications.
-
 Publish/apply the shared service and permission prerequisites, publish the shared
 client module, then deploy Atlas's own workers/workflow/schedule/registration and
-hosting. Keep external publication and apply authorization distinct from local
-implementation. No shared lifecycle package or dataset coordinator is required.
+hosting through the standard shared workflow. No shared lifecycle package or
+dataset coordinator is required.
 
 When all child implementation milestones meet their acceptance, run
 `sulion plan return --completed`, reread the root, and reconcile M1 against the

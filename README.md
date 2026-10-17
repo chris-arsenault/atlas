@@ -68,25 +68,25 @@ leaves the previous channel intact.
 
 ## Deployment and operation
 
-Deployment requires separate authorization and confirmation of the hostname.
-Nothing in this repository has been applied to AWS yet. Apply/publish the
-shared ahara-infra registration/status/admission changes and shared Terraform
-module and shared workflow changes first. The deployment caller passes the
-published module commit SHA to Ahara's shared workflow, which checks it out at
-`.ahara-tf-patterns` inside the workspace. Terraform sources refer to that
-ignored directory. For local development with the existing sibling checkout:
+Pushes to `main` and manual CI runs on `main` use Ahara's shared workflow to
+build and deploy Atlas at `atlas.ahara.io`. Pull requests run the checks without
+deploying. Shared ahara-infra registration/status/admission resources and the
+shared Terraform module and workflow must be published before the first Atlas
+deployment. Atlas pins the published module commit in its CI caller; Ahara
+checks it out at `.ahara-tf-patterns` inside the workspace. Terraform sources
+refer to that ignored directory. For local development with the existing sibling
+checkout:
 
 ```bash
 ln -s ../ahara-tf-patterns .ahara-tf-patterns
 ```
 
-The manual Deploy code workflow is a reusable-workflow caller. After Atlas's
-adapter tests pass, Ahara runs the browser/code checks, builds the ZIP through
-its existing Python `scripts/build-lambda.sh` hook, builds the frontend, applies
-the single Atlas Terraform state, and publishes dashboards. Atlas has no custom
-AWS deploy job or deploy script. The hostname and schedule choice are passed as
-public Terraform values. Normal pushes and pull requests run checks with
-deployment disabled. The schedule defaults to disabled. CI never starts a data
+After Atlas's adapter tests pass, Ahara runs the browser/code checks, builds the
+ZIP through its existing Python `scripts/build-lambda.sh` hook, builds the
+frontend, applies the single Atlas Terraform state, and publishes dashboards.
+Atlas has no custom
+AWS deploy job or deploy script. Terraform owns the hostname and schedule
+configuration. The schedule defaults to disabled. CI never starts a data
 refresh as a side effect.
 
 Operators start/inspect/stop/redrive executions with ordinary AWS tools:
@@ -99,7 +99,8 @@ aws dynamodb get-item --table-name ahara-pipeline-jobs \
   --key '{"execution_arn":{"S":"EXECUTION_ARN"}}'
 ```
 
-The managed `aws` command already uses the credential broker. Worker stages and
+In this environment, prefix AWS commands with `with-cred --`; other installations
+can use their ordinary AWS credential configuration. Worker stages and
 workflow outcomes appear in the existing Ahara Grafana/Loki/Tempo paths. The
 shared DynamoDB registry remains authoritative inventory before the first run;
 execution summaries are best effort, and native task history resolves gaps.
