@@ -1,24 +1,37 @@
+import { useState } from "react";
 import type { WorkspaceModel } from "./useWorkspace";
 import type { Detail, Evidence, Layer } from "./state";
 
 export function Controls({ model }: { model: WorkspaceModel }) {
+  const [expanded, setExpanded] = useState(false);
   return (
     <div className="workspace-controls">
       <LayerControl model={model} />
-      <DetailControl model={model} />
-      {model.state.layer === "historical" && <OverlayControls model={model} />}
+      <LineageControl model={model} />
       <button
-        className={model.state.globe ? "toggle active" : "toggle"}
-        aria-pressed={model.state.globe}
-        onClick={() => model.dispatch({ type: "patch", patch: { globe: !model.state.globe } })}
+        className="map-options-toggle"
+        aria-expanded={expanded}
+        aria-controls="map-options"
+        onClick={() => setExpanded(!expanded)}
       >
-        Globe
+        Map options
       </button>
-      {model.state.family && (
-        <button onClick={() => model.dispatch({ type: "patch", patch: { family: null } })}>
-          Show all families
+      <div id="map-options" className={`map-options${expanded ? " expanded" : ""}`}>
+        <DetailControl model={model} />
+        {model.state.layer === "historical" && <OverlayControls model={model} />}
+        <button
+          className={model.state.globe ? "toggle active" : "toggle"}
+          aria-pressed={model.state.globe}
+          onClick={() => model.dispatch({ type: "patch", patch: { globe: !model.state.globe } })}
+        >
+          Globe
         </button>
-      )}
+        {model.state.family && (
+          <button onClick={() => model.dispatch({ type: "patch", patch: { family: null } })}>
+            Show all families
+          </button>
+        )}
+      </div>
       <span className="workspace-count" role="status">
         {model.indexing
           ? "Indexing catalogue…"
@@ -27,19 +40,53 @@ export function Controls({ model }: { model: WorkspaceModel }) {
     </div>
   );
 }
+function LineageControl({ model }: { model: WorkspaceModel }) {
+  const active =
+    model.state.layer === "historical" && model.state.clock === "model" && model.state.ancestry;
+  const locatedVariants = model.release.history.observations
+    .filter((row) => row.geometry && row.dating.clock === "model")
+    .map((row) => row.variant);
+  const variant = locatedVariants.includes(model.state.variant)
+    ? model.state.variant
+    : (locatedVariants[0] ?? "all");
+  const ages = model.release.history.observations
+    .filter((row) => row.variant === variant && row.geometry && row.dating.clock === "model")
+    .map((row) => row.dating.sourceMedianAge ?? row.dating.start)
+    .filter((age): age is number => age != null)
+    .sort((a, b) => Math.abs(a - 2000) - Math.abs(b - 2000));
+  return (
+    <button
+      className={active ? "toggle active" : "toggle"}
+      aria-pressed={active}
+      onClick={() =>
+        model.dispatch({
+          type: "patch",
+          patch: active
+            ? { ancestry: false }
+            : {
+                layer: "historical",
+                clock: "model",
+                year:
+                  model.state.clock === "model" ? model.state.year : Math.round(ages[0] ?? 2000),
+                variant,
+                ancestry: true,
+                datedTree: true,
+              },
+        })
+      }
+    >
+      Lineage & dispersion
+    </button>
+  );
+}
 function OverlayControls({ model }: { model: WorkspaceModel }) {
   return (
-    <>
-      {(["ancestry", "contacts"] as const).map((key) => (
-        <button
-          key={key}
-          aria-pressed={model.state[key]}
-          onClick={() => model.dispatch({ type: "patch", patch: { [key]: !model.state[key] } })}
-        >
-          {key === "ancestry" ? "Ancestry links" : "Contact evidence"}
-        </button>
-      ))}
-    </>
+    <button
+      aria-pressed={model.state.contacts}
+      onClick={() => model.dispatch({ type: "patch", patch: { contacts: !model.state.contacts } })}
+    >
+      Contact evidence
+    </button>
   );
 }
 function LayerControl({ model }: { model: WorkspaceModel }) {

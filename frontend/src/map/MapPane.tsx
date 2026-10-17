@@ -5,6 +5,7 @@ import "maplibre-gl/dist/maplibre-gl.css";
 import type { WorkspaceModel } from "../atlas/useWorkspace";
 import { addAreas, mapStyle } from "./style";
 import { updateAreas } from "./update";
+import { ancestryFeatures } from "./overlays";
 
 export function MapPane({ model }: { model: WorkspaceModel }) {
   const container = useRef<HTMLDivElement>(null);
@@ -26,37 +27,12 @@ export function MapPane({ model }: { model: WorkspaceModel }) {
     map.current.setProjection({ type: model.state.globe ? "globe" : "mercator" });
   }, [ready, model]);
   useEffect(() => {
-    const point = model.state.selected ? model.nodes.get(model.state.selected)?.point : null;
-    if (ready && point)
-      map.current?.flyTo({
-        center: point,
-        zoom: Math.max(4.8, map.current.getZoom()),
-        duration: matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 700,
-      });
-  }, [ready, model.state.selected, model.nodes]);
+    if (ready && map.current) focusMap(map.current, latest.current);
+  }, [ready, model.state.selected, model.state.ancestry, model.state.layer, model.state.variant]);
   return (
     <section className="map-pane" aria-label="Language geography">
       <div className="map-canvas" ref={container} />
-      <div className="map-caption">
-        <span className="eyebrow">Geographic evidence</span>
-        <p>
-          {model.state.layer === "historical"
-            ? "Model points and dashed uncertainty contours are not language territories. Only supported evidence appears."
-            : "Areas digitized from published maps. Boundaries are approximate."}
-        </p>
-        {model.state.ancestry && (
-          <p>
-            Dashed links: proposed model ancestry between node estimates. These are not migration
-            routes.
-          </p>
-        )}
-        {model.state.contacts && (
-          <p>
-            Contact events retain separate sources. Events without historical coordinates remain in
-            the event inspector.
-          </p>
-        )}
-      </div>
+      <MapCaption model={model} />
       {error && (
         <div className="map-fallback" role="status">
           <h2>Map unavailable</h2>
@@ -68,6 +44,53 @@ export function MapPane({ model }: { model: WorkspaceModel }) {
         <OverlapPicker model={model} choices={choices} close={() => setChoices([])} />
       )}
     </section>
+  );
+}
+function focusMap(map: MapLibre, model: WorkspaceModel) {
+  const duration = matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 700;
+  if (model.state.ancestry && model.state.layer === "historical") {
+    const coordinates = ancestryFeatures(model).features.flatMap((feature) =>
+      feature.geometry.type === "LineString" ? feature.geometry.coordinates : []
+    );
+    const bounds = new maplibregl.LngLatBounds();
+    for (const [lng, lat] of coordinates) bounds.extend([lng, lat]);
+    if (!bounds.isEmpty())
+      map.fitBounds(bounds, {
+        padding: 60,
+        maxZoom: 4,
+        duration,
+      });
+    return;
+  }
+  const point = model.state.selected ? model.nodes.get(model.state.selected)?.point : null;
+  if (point) map.flyTo({ center: point, zoom: Math.max(4.8, map.getZoom()), duration });
+}
+function MapCaption({ model }: { model: WorkspaceModel }) {
+  const ancestry = ancestryFeatures(model);
+  return (
+    <div className="map-caption">
+      <span className="eyebrow">Geographic evidence</span>
+      <p>
+        {model.state.layer === "historical"
+          ? "Source model locations and uncertainty contours; no historical territories."
+          : "Areas digitized from published maps. Boundaries are approximate."}
+      </p>
+      {model.state.ancestry && (
+        <p>
+          <span role="status">{ancestry.features.length} sourced ancestry links at this date.</span>{" "}
+          Dashed ancestry links join estimates at different node ages; they are not migration
+          routes.
+          {!ancestry.features.length &&
+            " No located ancestry is available for this selection, date and source."}
+        </p>
+      )}
+      {model.state.contacts && (
+        <p>
+          Contact events retain separate sources. Events without historical coordinates remain in
+          the event inspector.
+        </p>
+      )}
+    </div>
   );
 }
 function mountMap(

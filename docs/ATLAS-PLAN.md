@@ -23,7 +23,11 @@ The desktop workspace has a flat map occupying approximately 70% of the main
 area, a genealogy pane occupying 30%, search above, and shared time and evidence
 controls below. Both panes have independent zoom and expansion state. Narrow
 screens switch between map and tree while retaining the shared selection and
-filters. A details drawer shows the selected language, ancestry, observations,
+filters. On phones, a compact timeline sits above the map and remains visible
+while scrolling; dates, sources, and events expand on request. An explicit
+Lineage & dispersion control opens located source-model evidence with ancestry
+links and dated genealogy. Links follow the selected lineage or branch; missing
+source coordinates remain unavailable. A details drawer shows the selected language, ancestry, observations,
 sources, dates, and qualifications.
 
 - Selecting a language on the map highlights and reveals its ancestry in the

@@ -53,13 +53,13 @@ function Workspace({ release }: { release: Release }) {
           Genealogy
         </button>
       </div>
+      <Timeline model={model} />
       <div className={`workspace show-${pane}`}>
         <MapPane model={model} />
         <TreePane model={model} />
         <Details model={model} />
       </div>
       <EvidenceControls model={model} />
-      <Timeline model={model} />
       {model.queryError && (
         <p role="alert">Catalogue queries unavailable. Reload to rebuild the index.</p>
       )}

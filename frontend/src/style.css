@@ -220,6 +220,12 @@ select {
   font-size: 12px;
   color: var(--ink);
 }
+.map-options {
+  display: contents;
+}
+.map-options-toggle {
+  display: none;
+}
 .workspace-count {
   margin-left: auto;
   color: var(--muted);
@@ -233,6 +239,7 @@ select {
   border-color: #91b6a5;
 }
 .workspace {
+  order: 1;
   display: flex;
   position: relative;
   flex: 1;
@@ -486,6 +493,7 @@ select {
   border-radius: 3px;
 }
 .evidence-controls {
+  order: 2;
   display: flex;
   gap: 22px;
   padding: 12px 28px;
@@ -523,10 +531,17 @@ select {
   text-underline-offset: 4px;
 }
 .timeline {
+  order: 3;
   border-top: 1px solid var(--line);
   padding: 17px 28px 11px;
   background: #f0efe5;
   flex-shrink: 0;
+}
+.timeline-options-toggle {
+  display: none;
+}
+.timeline-date-short {
+  display: none;
 }
 .timeline-heading {
   display: flex;
@@ -559,6 +574,7 @@ select {
   color: #7f664a;
 }
 .app-footer {
+  order: 4;
   display: flex;
   justify-content: space-between;
   padding: 10px 28px;
@@ -724,7 +740,23 @@ dialog::backdrop {
   }
   .workspace-controls select {
     max-width: 180px;
-    font-size: 10px;
+    font-size: 16px;
+  }
+  .workspace-controls button {
+    font-size: 12px;
+    min-height: 40px;
+  }
+  .map-options-toggle {
+    display: block;
+  }
+  .map-options {
+    display: none;
+  }
+  .map-options.expanded {
+    display: flex;
+    flex-wrap: wrap;
+    flex-basis: 100%;
+    gap: 8px;
   }
   .mobile-tabs {
     display: flex;
@@ -783,7 +815,68 @@ dialog::backdrop {
     padding-right: 8px;
   }
   .timeline {
-    padding: 14px 12px;
+    order: 0;
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    padding: 10px 12px;
+  }
+  .timeline.options-open {
+    position: static;
+  }
+  .timeline-options {
+    display: none;
+  }
+  .timeline.options-open .timeline-options {
+    display: block;
+  }
+  .timeline-options-toggle {
+    display: block;
+    font-size: 12px;
+    min-height: 40px;
+    flex: none;
+  }
+  .timeline-rail {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .timeline-rail .timeline-heading {
+    flex: 1;
+    margin-bottom: 6px;
+  }
+  .timeline-heading p,
+  .timeline-date-long {
+    display: none;
+  }
+  .timeline-date-short {
+    display: inline;
+  }
+  .timeline input[type="range"] {
+    height: 28px;
+  }
+  .timeline .playback {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-top: 8px;
+  }
+  .timeline .playback button {
+    font-size: 11px;
+    min-height: 40px;
+    flex: 1;
+  }
+  .timeline .playback small {
+    display: none;
+  }
+  .time-controls label {
+    flex-wrap: wrap;
+    max-width: 100%;
+  }
+  .time-controls select,
+  .time-controls input[type="number"] {
+    font-size: 16px;
+    min-height: 40px;
   }
   .timeline-heading {
     gap: 12px;
@@ -795,6 +888,10 @@ dialog::backdrop {
   .timeline-heading p {
     max-width: 150px;
     font-size: 10px;
+  }
+  .timeline-heading button {
+    font-size: 12px;
+    min-height: 40px;
   }
   .app-footer {
     padding: 10px 12px;

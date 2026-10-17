@@ -68,6 +68,7 @@ function catalogue(): Languoid[] {
         ),
         glottocode: "beng1280",
         variant,
+        point: variant === "bouckaert" ? [90, 24] : null,
         dating: { kind: "uncertain", clock: "model", start: 0, end: 0, sourceMedianAge: 0 },
       },
     ]),

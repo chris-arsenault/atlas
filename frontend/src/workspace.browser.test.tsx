@@ -146,6 +146,61 @@ it("retains shared selection between mobile panes", async () => {
   await page.getByRole("button", { name: "Map", exact: true }).click();
   await expect.poll(() => new URLSearchParams(location.search).get("language")).toBe("beng1280");
 });
+it("exposes the timeline and source-backed geographic lineage on mobile", async () => {
+  await page.viewport(390, 844);
+  mount("?language=beng1280");
+  const explore = page.getByRole("button", { name: "Explore timeline" });
+  await expect.element(explore).toBeVisible();
+  const timeline = () => document.querySelector(".timeline")!.getBoundingClientRect();
+  expect(timeline().bottom).toBeLessThan(innerHeight);
+  expect(timeline().bottom).toBeLessThanOrEqual(
+    document.querySelector(".workspace")!.getBoundingClientRect().top
+  );
+  await explore.click();
+  await expect.element(page.getByRole("slider", { name: "Historical year" })).toBeEnabled();
+  await page.getByRole("button", { name: "Lineage & dispersion", exact: true }).click();
+  await expect.element(page.getByText("1 sourced ancestry links at this date.")).toBeVisible();
+  const params = () => new URLSearchParams(location.search);
+  expect(params().get("clock")).toBe("model");
+  expect(params().get("variant")).toBe("bouckaert");
+  expect(params().get("year")).toBe("1144");
+  const toggle = page.getByRole("button", { name: "Dates, sources & events" });
+  await expect.element(toggle).toHaveAttribute("aria-expanded", "false");
+  await page.getByRole("button", { name: "Previous boundary", exact: true }).click();
+  await expect.element(page.getByText(/No located ancestry is available/)).toBeVisible();
+  await toggle.click();
+  await page.getByRole("spinbutton", { name: "Source model age" }).fill("1144");
+  await expect.element(page.getByText("1 sourced ancestry links at this date.")).toBeVisible();
+  await page.getByRole("combobox", { name: "Reconstruction variant" }).selectOptions("chang");
+  await expect.element(page.getByText(/No located ancestry is available/)).toBeVisible();
+  await page.getByRole("combobox", { name: "Reconstruction variant" }).selectOptions("bouckaert");
+  await toggle.click();
+  await page.getByRole("button", { name: "Genealogy", exact: true }).click();
+  await expect.element(page.getByRole("region", { name: "Language genealogy" })).toBeVisible();
+  await expect
+    .poll(() => document.querySelector(".tree-label.selected")?.textContent)
+    .toBe("Bengali (bouckaert)");
+  await page.getByRole("button", { name: "Map", exact: true }).click();
+  const search = page.getByRole("searchbox");
+  await search.fill("Sumerian");
+  await page.getByRole("button", { name: /^Sumerian\s*language/ }).click();
+  await expect.element(page.getByText(/No located ancestry is available/)).toBeVisible();
+  expect(params().get("language")).toBe("sume1241");
+  expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(innerWidth);
+});
+it("keeps timeline entry points within a small phone viewport", async () => {
+  await page.viewport(320, 568);
+  mount();
+  await expect.element(page.getByRole("button", { name: "Explore timeline" })).toBeVisible();
+  expect(document.querySelector(".timeline")!.getBoundingClientRect().bottom).toBeLessThan(
+    innerHeight
+  );
+  await page.getByRole("button", { name: "Lineage & dispersion", exact: true }).click();
+  await expect.element(page.getByRole("slider", { name: "Historical year" })).toBeEnabled();
+  expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(innerWidth);
+  document.querySelector(".map-pane")!.scrollIntoView();
+  expect(document.querySelector(".timeline")!.getBoundingClientRect().top).toBe(0);
+});
 it("provides actionable loading failures", async () => {
   const original = globalThis.fetch;
   vi.spyOn(globalThis, "fetch").mockImplementation((input, init) =>
