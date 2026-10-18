@@ -7,7 +7,7 @@ export function TimeControls({ model }: { model: WorkspaceModel }) {
     <div className="time-controls">
       <DateEntry model={model} />
       <label>
-        Source / alternative
+        Reconstruction
         <select
           aria-label="Reconstruction variant"
           value={model.state.variant}
@@ -15,8 +15,13 @@ export function TimeControls({ model }: { model: WorkspaceModel }) {
             model.dispatch({ type: "patch", patch: { variant: event.target.value } })
           }
         >
-          <option value="all">All sources / alternatives</option>
-          {model.release.manifest.coverage.variants.map((variant) => (
+          <option value="all">
+            {model.release.model ? "Preferred reconstruction" : "All sources / alternatives"}
+          </option>
+          {(model.release.model
+            ? Object.keys(model.release.model.scenarios)
+            : model.release.manifest.coverage.variants
+          ).map((variant) => (
             <option key={variant} value={variant}>
               {variantLabel(variant)}
             </option>

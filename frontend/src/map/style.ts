@@ -61,6 +61,20 @@ export function addAreas(map: Map, release: Release) {
     });
   }
   map.addSource("locations", { type: "geojson", data: emptyFeatures });
+  map.addSource("modeled", { type: "geojson", data: emptyFeatures });
+  map.addLayer({
+    id: "modeled",
+    type: "fill",
+    source: "modeled",
+    paint: { "fill-color": colors, "fill-opacity": 0.48, "fill-outline-color": "#fffdf4" },
+  });
+  map.addLayer({
+    id: "modeled-selected",
+    type: "line",
+    source: "modeled",
+    filter: ["==", ["get", "subject"], ""],
+    paint: { "line-color": "#172c32", "line-width": 2.5 },
+  });
   addOverlays(map);
   map.addSource("uncertainty", { type: "geojson", data: emptyFeatures });
   map.addLayer({
@@ -80,10 +94,10 @@ export function addAreas(map: Map, release: Release) {
     type: "circle",
     source: "locations",
     paint: {
-      "circle-radius": 6,
-      "circle-color": "#254e5a",
+      "circle-radius": 3,
+      "circle-color": colors,
       "circle-stroke-color": "#fffdf4",
-      "circle-stroke-width": 2,
+      "circle-stroke-width": 0.75,
     },
   });
 }

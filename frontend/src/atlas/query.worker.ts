@@ -3,7 +3,7 @@ import { CatalogueIndex, query, type Query, type ViewQuery } from "./index";
 import type { Release } from "../data/schema";
 
 let catalogue: CatalogueIndex;
-let release: Pick<Release, "observations" | "history">;
+let release: Pick<Release, "observations" | "history" | "model">;
 self.onmessage = (
   event: MessageEvent<{
     id: number;

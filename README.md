@@ -10,12 +10,14 @@ the application and datasets still load directly from S3 through CloudFront.
 The OG server does not query a database or process Atlas data.
 
 The workspace has one map and one BCE/CE timeline. Its 2007 endpoint shows the
-Atlas reference snapshot. Earlier dates show sourced reconstructed locations,
-written attestations and events, with coverage marks and navigation to nearby
-evidence. Indo-European reconstructions retain date and location uncertainty;
-they are not historical territories. Source and alternative filters live in
-evidence options. Undated traditional maps remain accessible through each
-language's source records. Scrubbing updates the view immediately and saves a
+Atlas reference snapshot. Earlier dates show pipeline-modeled lineage distributions,
+written attestations and events. Approximate dates, historical stages, ancestral
+locations and expansion priors support interpolation and extrapolation between
+sparse sources. Overlapping regions are estimates, not exclusive borders;
+uncertainty envelopes are heuristic rather than probability contours. Alternative
+chronologies and inference methods remain inspectable. Undated traditional maps
+remain accessible through each language's source records. Scrubbing updates the
+view immediately and saves a
 shareable URL after interaction settles.
 
 The data pipeline is EventBridge Scheduler → Step Functions Standard → Python
@@ -55,8 +57,9 @@ Local serving checks do not establish deployed CloudFront behavior.
 ## Data ownership
 
 `data/sources.lock.json` pins upstream archives and checksums. Along with
-`data/mappings/glottolog.json` and `data/historical/claims.json`, it is an
-authored source input in Git. CI validates these files without fetching archives,
+`data/mappings/glottolog.json`, `data/historical/claims.json` and
+`data/historical/model.json`, it is an authored source input in Git. CI validates
+these files without fetching archives,
 producing releases, or publishing data. The Lambda ZIP contains code and tools;
 it does not contain these inputs.
 
@@ -74,8 +77,8 @@ that snapshot, never a moving Git ref or packaged data. A release includes the
 input files, commit, and checksums as immutable artifacts. Editing an input does
 not publish a release or require rebuilding worker code.
 
-Date normalization, source joins and corrections belong in the pipeline. The
-browser reads the published `calendar-v1` contract, formats years as BCE/CE and
+Date normalization, source joins, historical inference and corrections belong in
+the pipeline. The browser reads the published `calendar-v1` contract, formats years as BCE/CE and
 queries those records. It does not import source configuration or reinterpret
 older releases. An incompatible release produces an explicit dataset error
 until an independent pipeline execution publishes compatible data.
@@ -103,7 +106,7 @@ Local commands never publish. To consume that output in browser tests, set
 against either the tiny synthetic fixture or that complete prebuilt release.
 
 Layers download only catalogue/metadata/geography archives. Assembly downloads
-only catalogue, basemap and phylogeny archives. Layer hand-offs contain the
+catalogue, geography, basemap and phylogeny archives. Layer hand-offs contain the
 catalogue, observation records, accounting, source tables and compiled tiles;
 raw geometry scratch files are not transferred. Validated immutable releases
 publish before a final uncached channel update. Failure before that update

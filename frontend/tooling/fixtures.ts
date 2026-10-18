@@ -54,6 +54,7 @@ function catalogue(): Languoid[] {
     { ...node("basq1248", "Basque"), family: "basq1248" },
     { ...node("sume1241", "Sumerian"), family: "sume1241" },
     node("fixture:overlap", "Synthetic overlap"),
+    node("fixture:continuation", "Synthetic continuation"),
     ...["bouckaert", "chang"].flatMap((variant): Languoid[] => [
       {
         ...node(`history:${variant}:ancestor:test`, `Synthetic ancestor (${variant})`),
@@ -152,8 +153,12 @@ function artifactWriter(
   };
 }
 export function prepareFixture() {
+  writeFixture(false);
+  return writeFixture(true);
+}
+function writeFixture(modeled: boolean) {
   cpSync(resolve("public"), output, { recursive: true });
-  const release = "000000000000000000000001";
+  const release = modeled ? "000000000000000000000002" : "000000000000000000000001";
   const directory = resolve(output, `data/v1/releases/${release}`);
   const history = historical(),
     nodes = catalogue();
@@ -167,6 +172,7 @@ export function prepareFixture() {
   );
   const artifacts: Record<string, { sha256: string; bytes: number }> = {};
   const write = artifactWriter(directory, artifacts);
+  if (modeled) writeModel(write);
   write("catalogue.json", nodes);
   write("history.json", history);
   write(
@@ -187,14 +193,11 @@ export function prepareFixture() {
     shards[shard][row.id] = row;
   }
   for (const [shard, rows] of Object.entries(shards)) write(`details/${shard}.json`, rows);
-  for (const name of ["basemap.pmtiles", "contemporary.pmtiles", "traditional.pmtiles"]) {
-    const bytes = readFileSync(resolve("tooling/fixtures/map.pmtiles"));
-    writeFileSync(resolve(directory, name), bytes);
-    artifacts[name] = { sha256: hash(bytes), bytes: bytes.length };
-  }
+  writeTiles(directory, artifacts);
   const manifest = {
     schema: 1,
     dataContract: "calendar-v1",
+    ...(modeled ? { model: "model/index.json" } : {}),
     release,
     artifacts,
     sources: [
@@ -216,7 +219,7 @@ export function prepareFixture() {
   const content = JSON.stringify(manifest);
   writeFileSync(resolve(directory, "manifest.json"), content);
   writeFileSync(
-    resolve(output, "data/v1/channel.json"),
+    resolve(output, modeled ? "data/v1/model-channel.json" : "data/v1/channel.json"),
     JSON.stringify({
       schema: 1,
       manifest: `/data/v1/releases/${release}/manifest.json`,
@@ -224,6 +227,81 @@ export function prepareFixture() {
     })
   );
   return output;
+}
+function writeTiles(
+  directory: string,
+  artifacts: Record<string, { sha256: string; bytes: number }>
+) {
+  for (const name of ["basemap.pmtiles", "contemporary.pmtiles", "traditional.pmtiles"]) {
+    const bytes = readFileSync(resolve("tooling/fixtures/map.pmtiles"));
+    writeFileSync(resolve(directory, name), bytes);
+    artifacts[name] = { sha256: hash(bytes), bytes: bytes.length };
+  }
+}
+function writeModel(write: ReturnType<typeof artifactWriter>) {
+  const frames = ["chang", "bouckaert"].flatMap((scenario) =>
+    [0, 800].map((start) => {
+      const rows: ObservationDetail[] = [
+        {
+          ...observation(`model:${scenario}:sume1241`, "sume1241", "modeled"),
+          evidence: "reconstructed",
+          variant: scenario,
+          dating: { kind: "validity", start, end: start + 799, year: start + 399 },
+          geometry: {
+            type: "Polygon",
+            coordinates: [
+              [
+                [44, 31],
+                [47, 31],
+                [47, 34],
+                [44, 34],
+                [44, 31],
+              ],
+            ],
+          },
+          model: {
+            label: "Sumerian",
+            method: "historical-stage",
+            use: start === 0 ? "learned and scribal" : "synthetic alternative stage",
+            point: [45, 32],
+            uncertaintyKm: 200,
+            anchorYear: 100,
+            selectionSubjects: ["sume1241", "fixture:continuation"],
+          },
+        },
+      ];
+      const artifact = `model/${scenario}/${start}.json`;
+      write(artifact, {
+        schema: 1,
+        scenario,
+        start,
+        end: start + 799,
+        year: start + 399,
+        observations: rows,
+      });
+      return {
+        scenario,
+        start,
+        end: start + 799,
+        year: start + 399,
+        artifact,
+        count: 1,
+        methods: { "historical-stage": 1 },
+        families: { sume1241: 1 },
+        coverage: { sume1241: { reconstructed: 1 } },
+      };
+    })
+  );
+  write("model/index.json", {
+    schema: 1,
+    id: "synthetic-model",
+    defaultScenario: "chang",
+    description: "Synthetic model; not historical evidence.",
+    assumptions: ["Synthetic frame for browser tests."],
+    references: {},
+    frames,
+    scenarios: { chang: {}, bouckaert: {} },
+  });
 }
 export default function setup() {
   if (!process.env.ATLAS_DATA_DIR) prepareFixture();

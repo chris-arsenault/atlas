@@ -1,7 +1,7 @@
 import { expect, it } from "vitest";
 import { CatalogueIndex, activeDate, activeObservations, query, type ViewResult } from "./index";
 import { defaultState, fromUrl, toUrl, yearLabel } from "./state";
-import type { Languoid, Observation, History } from "../data/schema";
+import type { Languoid, Observation, History, ModelIndex } from "../data/schema";
 
 const node = (id: string, parent: string | null): Languoid => ({
   id,
@@ -116,4 +116,41 @@ it("counts narrow dated evidence in coverage and keeps playback within the same 
   expect(hidden.coverage.every((count) => count === 0)).toBe(true);
   expect(hidden.boundaries).toEqual([-9999, 2007]);
   expect(hidden.nearestYear).toBe(null);
+});
+
+it("keeps textual chronology alternatives visible when selecting a dispersal chronology", () => {
+  const index = new CatalogueIndex([node("root", null)]);
+  const history: History = {
+    observations: [],
+    events: [],
+    relationships: [],
+    attestations: [
+      {
+        id: "text",
+        subject: "root",
+        source: "source",
+        locator: "p. 1",
+        variant: "text-early-chronology",
+        dating: { kind: "uncertain", start: 800, end: 1000 },
+        evidence: "attested",
+        note: "Independent textual dating",
+      },
+    ],
+  };
+  const model: ModelIndex = {
+    schema: 1,
+    id: "test",
+    defaultScenario: "chang",
+    description: "test",
+    assumptions: [],
+    references: {},
+    frames: [],
+    scenarios: { chang: {}, bouckaert: {} },
+  };
+  const view = query(
+    index,
+    { observations: [], history, model },
+    { type: "view", state: { ...defaultState, year: 900, variant: "chang" } }
+  ) as ViewResult;
+  expect(view.attestations).toEqual(["text"]);
 });

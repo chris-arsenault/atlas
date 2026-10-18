@@ -4,16 +4,16 @@ import { loadDetail } from "../data/api";
 import { detailSchema, type Languoid, type ObservationDetail } from "../data/schema";
 import { ancestorIds } from "../tree/layout";
 import { Attestations } from "./Attestations";
-import { datingLabel } from "../timeline/time";
+import { datingLabel, timeLabel } from "../timeline/time";
 import { referenceYear } from "../atlas/state";
 import { EventDetails } from "../timeline/Events";
 import { acceptsClaim } from "../timeline/events";
 
 export function Details({ model }: { model: WorkspaceModel }) {
   const node = model.state.selected ? model.nodes.get(model.state.selected) : null;
-  const rows = model.view?.observations.filter((row) => row.subject === node?.id) ?? [];
+  const rows = selectedRows(model);
   const event = model.release.history.events.find(
-    (row) => row.id === model.state.event && acceptsClaim(row, model.state)
+    (row) => row.id === model.state.event && acceptsClaim(row, model.claimState)
   );
   if (!node) return null;
   return (
@@ -27,27 +27,45 @@ export function Details({ model }: { model: WorkspaceModel }) {
         </button>
       </div>
       <h2>{node.name}</h2>
-      <p className="classification-status">
-        {node.iso ? `ISO ${node.iso} · ` : ""}
-        {node.status}
-      </p>
-      <Ancestry model={model} />
+      <HistoricalUse model={model} />
       {event && <EventDetails event={event} model={model} />}
       <div className="detail-actions">
         <button onClick={() => model.dispatch({ type: "patch", patch: { family: node.family } })}>
           Isolate family
         </button>
       </div>
-      <h3>Geographic evidence</h3>
+      <h3>{model.frameEntry ? "Modeled presence" : "Geographic evidence"}</h3>
       {rows.length === 0 ? (
         <MissingArea model={model} node={node} />
       ) : (
         <ObservationList model={model} rows={rows} />
       )}
+      <details>
+        <summary>Classification ancestry</summary>
+        <Ancestry model={model} />
+      </details>
       <CatalogueDetails node={node} />
       <Attestations model={model} />
       <SourceRecords model={model} node={node} />
     </aside>
+  );
+}
+function selectedRows(model: WorkspaceModel) {
+  return model.frameEntry
+    ? model.selection
+    : (model.view?.observations.filter((row) => row.subject === model.state.selected) ?? []);
+}
+function HistoricalUse({ model }: { model: WorkspaceModel }) {
+  const row =
+    model.selection.find((item) => item.id === model.focusedObservation) ?? model.selection[0];
+  if (!row?.model) return null;
+  return (
+    <p className="classification-status">
+      {row.model.label !== model.nodes.get(model.state.selected ?? "")?.name
+        ? `${row.model.label} · `
+        : ""}
+      {row.model.use}
+    </p>
   );
 }
 function MissingArea({ model, node }: { model: WorkspaceModel; node: Languoid }) {
@@ -64,6 +82,9 @@ function CatalogueDetails({ node }: { node: Languoid }) {
   return (
     <>
       <h3>Catalogue</h3>
+      <p className="classification-status">
+        {node.iso ? `ISO ${node.iso} · ` : ""}Catalogue status: {node.status}
+      </p>
       {node.glottocode && !node.id.startsWith("atlas:") && (
         <a
           href={`https://glottolog.org/resource/languoid/id/${node.glottocode}`}
@@ -104,9 +125,12 @@ function ObservationList({
 }) {
   const selected = rows.find((row) => row.id === model.focusedObservation)?.id ?? rows[0].id;
   const detail = useQuery({
-    queryKey: ["detail", model.release.manifest.release, selected],
+    queryKey: ["detail", model.release.manifest.release, selected, model.frameEntry?.artifact],
     queryFn: async ({ signal }) =>
-      detailSchema.parse(await loadDetail(model.release, selected, signal)),
+      detailSchema.parse(
+        model.modeled.find((row) => row.id === selected) ??
+          (await loadDetail(model.release, selected, signal))
+      ),
     staleTime: Infinity,
   });
   const source = model.release.manifest.sources.find((row) => row.id === detail.data?.source);
@@ -121,7 +145,7 @@ function ObservationList({
         >
           {rows.map((row) => (
             <option key={row.id} value={row.id}>
-              {row.id}
+              {model.modeled.find((item) => item.id === row.id)?.model?.label ?? row.id}
             </option>
           ))}
         </select>
@@ -134,7 +158,7 @@ function ObservationList({
       )}
       {detail.data && (
         <>
-          <EvidenceText detail={detail.data} />
+          <EvidenceText detail={detail.data} model={model} />
           <details>
             <summary>Source locator and transformations</summary>
             <pre>{JSON.stringify(detail.data.locator, null, 2)}</pre>
@@ -150,13 +174,25 @@ function ObservationList({
     </div>
   );
 }
-function EvidenceText({ detail }: { detail: ObservationDetail }) {
+function EvidenceText({ detail, model }: { detail: ObservationDetail; model: WorkspaceModel }) {
   const date = datingLabel(detail.dating);
   return (
     <>
       <p>
         <span className={`evidence-label ${detail.evidence}`}>{detail.evidence}</span> · {date}
       </p>
+      {detail.model && (
+        <>
+          <p>
+            {detail.model.label} · {detail.model.use}
+          </p>
+          <p>
+            Method: {detail.model.method.replaceAll("-", " ")}. The dotted envelope expresses model
+            sensitivity, not a confidence percentage.
+          </p>
+          <ModelBasis detail={detail} model={model} />
+        </>
+      )}
       <p>{detail.geographicUncertainty}</p>
       <p>{detail.note}</p>
       {detail.dating.sourceCalendarEpoch != null && (
@@ -175,6 +211,46 @@ function EvidenceText({ detail }: { detail: ObservationDetail }) {
       )}
     </>
   );
+}
+
+function ModelBasis({ detail, model }: { detail: ObservationDetail; model: WorkspaceModel }) {
+  const reference = model.release.model?.references[modelBasisSource(detail)];
+  const links = Object.values(detail.model?.continuationBasis ?? {});
+  return (
+    <details>
+      <summary>Historical basis and assumptions</summary>
+      <ModelCalibration detail={detail} model={model} />
+      {links.map((link) => (
+        <p key={link.basis}>{link.basis}</p>
+      ))}
+      {reference && (
+        <a href={reference.reference} target="_blank" rel="noreferrer">
+          {reference.citation} ↗
+        </a>
+      )}
+    </details>
+  );
+}
+
+function modelBasisSource(detail: ObservationDetail) {
+  return detail.model?.stageSource ?? detail.model?.calibration?.prior?.source ?? "";
+}
+
+function ModelCalibration({ detail, model }: { detail: ObservationDetail; model: WorkspaceModel }) {
+  const calibration = detail.model?.calibration;
+  if (!calibration) return null;
+  const prior = calibration.prior;
+  if (prior)
+    return (
+      <p>
+        Inherited lineage anchor: {model.nodes.get(calibration.subject)?.name}, approximately{" "}
+        {timeLabel(prior.year)}, with {prior.uncertaintyYears} years of temporal sensitivity.{" "}
+        {prior.basis}
+      </p>
+    );
+  return calibration.study ? (
+    <p>Study chronology: {datingLabel(calibration.study.dating)}.</p>
+  ) : null;
 }
 function SourceRecords({ model, node }: { model: WorkspaceModel; node: Languoid }) {
   const rows = model.release.observations.filter((row) => row.subject === node.id);

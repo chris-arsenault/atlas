@@ -14,6 +14,7 @@ INPUT_FILES = (
     "data/sources.lock.json",
     "data/mappings/glottolog.json",
     "data/historical/claims.json",
+    "data/historical/model.json",
 )
 
 
@@ -157,4 +158,29 @@ def validate_inputs(root):
                 raise ValueError("Reference dates require a year")
             if dating["kind"] in ("uncertain", "validity") and start is None and end is None:
                 raise ValueError("Dated authored claims require at least one boundary")
+    model = read_json(root / "data/historical/model.json")
+    if model["schema"] != 1 or not model["id"] or not model["assumptions"]:
+        raise ValueError("Unsupported historical model configuration")
+    if model["parameters"]["frameYears"] <= 0:
+        raise ValueError("Model frame resolution must be positive")
+    for calibration in model["calibrations"].values():
+        if calibration["source"] not in model["references"] or not calibration["basis"]:
+            raise ValueError("Model calibrations require a source and stated basis")
+    for stage in model["stages"].values():
+        if stage["start"] > stage["end"] or stage["source"] not in model["references"]:
+            raise ValueError("Invalid historical-stage model")
+    for link in model.get("continuations", {}).values():
+        if link["source"] not in model["references"] or not link["basis"] or not link["stages"]:
+            raise ValueError("Historical stage links require a source, basis and stages")
+    for expansion in model["expansions"].values():
+        for region in expansion.get("regions", []):
+            bounds = region["bounds"]
+            if (
+                region["source"] not in model["references"]
+                or type(region["start"]) is not int
+                or len(bounds) != 4
+                or not -180 <= bounds[0] < bounds[2] <= 180
+                or not -90 <= bounds[1] < bounds[3] <= 90
+            ):
+                raise ValueError("Invalid regional expansion prior")
     return claims

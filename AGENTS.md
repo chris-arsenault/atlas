@@ -10,6 +10,9 @@ infrastructure belongs in Ahara; linguistic data processing belongs here.
   deployed Git revision as its final step; workers transform and publish data.
 - Preserve every source row, unresolved join, overlap, date label, and citation.
   A source coordinate is a point, and an undated area is not historical evidence.
+- The pipeline models historical distributions between sparse observations.
+  Keep authored priors and extrapolations explicit, preserve raw sources, and
+  publish computed frames. The browser selects and renders those static frames.
 - Authored files use native editing. Source archives and generated releases stay
   in ignored caches; `.sulion-paste` is private and never shipped.
 - `make ci` checks code with fixtures. `make data` independently builds the full

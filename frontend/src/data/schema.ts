@@ -28,6 +28,7 @@ export const nodeSchema = z.object({
   sources: z.array(z.string()),
   dating: datingSchema.optional(),
   variant: z.string().optional(),
+  historicalSpan: z.string().nullable().optional(),
 });
 export type Languoid = z.infer<typeof nodeSchema>;
 export const observationSchema = z.object({
@@ -50,6 +51,45 @@ export const detailSchema = observationSchema
     geometry: z.custom<Geometry>().nullable().optional(),
     uncertaintyGeometry: z.custom<Geometry>().nullable().optional(),
     posterior: z.number().nullable().optional(),
+    model: z
+      .object({
+        label: z.string(),
+        method: z.string(),
+        use: z.string(),
+        point: z.tuple([z.number(), z.number()]),
+        uncertaintyKm: z.number(),
+        anchorYear: z.number(),
+        calibration: z
+          .object({
+            subject: z.string(),
+            prior: z
+              .object({
+                year: z.number(),
+                uncertaintyYears: z.number(),
+                source: z.string(),
+                basis: z.string(),
+              })
+              .optional(),
+            study: z
+              .object({ year: z.number(), sourceNode: z.string(), dating: datingSchema })
+              .optional(),
+          })
+          .nullable()
+          .optional(),
+        stageSource: z.string().nullable().optional(),
+        selectionSubjects: z.array(z.string()).optional(),
+        continuationBasis: z
+          .record(
+            z.string(),
+            z.object({
+              stages: z.array(z.string()),
+              source: z.string(),
+              basis: z.string(),
+            })
+          )
+          .optional(),
+      })
+      .optional(),
   })
   .passthrough();
 export type ObservationDetail = z.infer<typeof detailSchema>;
@@ -66,6 +106,7 @@ export const sourceSchema = z
 export const manifestSchema = z.object({
   schema: z.literal(1),
   dataContract: z.literal("calendar-v1"),
+  model: z.string().optional(),
   release: z.string().regex(/^[a-f0-9]{24}$/),
   sources: z.array(sourceSchema),
   artifacts: z.record(
@@ -174,4 +215,37 @@ export interface Release {
   nodes: Languoid[];
   observations: Observation[];
   history: History;
+  model?: ModelIndex;
 }
+
+export const modelFrameEntrySchema = z.object({
+  scenario: z.string(),
+  start: z.number().int(),
+  end: z.number().int(),
+  year: z.number().int(),
+  artifact: z.string(),
+  count: z.number().int(),
+  methods: z.record(z.string(), z.number()),
+  families: z.record(z.string(), z.number()),
+  coverage: z.record(z.string(), z.record(z.string(), z.number())),
+});
+export const modelIndexSchema = z.object({
+  schema: z.literal(1),
+  id: z.string(),
+  defaultScenario: z.string(),
+  description: z.string(),
+  assumptions: z.array(z.string()),
+  references: z.record(z.string(), z.object({ citation: z.string(), reference: z.string().url() })),
+  frames: z.array(modelFrameEntrySchema),
+  scenarios: z.record(z.string(), z.unknown()),
+});
+export const modelFrameSchema = z.object({
+  schema: z.literal(1),
+  scenario: z.string(),
+  year: z.number().int(),
+  start: z.number().int(),
+  end: z.number().int(),
+  observations: z.array(detailSchema),
+});
+export type ModelIndex = z.infer<typeof modelIndexSchema>;
+export type ModelFrameEntry = z.infer<typeof modelFrameEntrySchema>;

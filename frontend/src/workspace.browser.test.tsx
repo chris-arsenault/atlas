@@ -38,6 +38,7 @@ it("searches aliases, reveals ancestry, and selects branches without changing th
   await search.fill("Bangla");
   await page.getByRole("button", { name: /^Bengali\s*language/ }).click();
   await expect.element(page.getByRole("heading", { name: "Bengali", exact: true })).toBeVisible();
+  await page.getByText("Classification ancestry", { exact: true }).click();
   await expect
     .element(
       page
@@ -299,4 +300,56 @@ it("cancels a pending URL save when browser navigation restores another date", a
   await new Promise((resolve) => setTimeout(resolve, 600));
   expect(new URLSearchParams(location.search).get("year")).toBe("1200");
   await expect.element(page.getByRole("heading", { name: "Bengali", exact: true })).toBeVisible();
+});
+
+function useModeledFixture() {
+  const original = globalThis.fetch;
+  vi.spyOn(globalThis, "fetch").mockImplementation((input, init) =>
+    original(String(input).replace("/v1/channel.json", "/v1/model-channel.json"), init)
+  );
+}
+it("uses a published historical stage association for canonical selection", async () => {
+  useModeledFixture();
+  mount("?language=fixture:continuation&year=1");
+  await expect
+    .element(
+      page
+        .getByRole("complementary", { name: "Selected language details" })
+        .getByRole("heading", { name: "Synthetic continuation", exact: true })
+    )
+    .toBeVisible();
+  await expect.element(page.getByText("Sumerian · learned and scribal").first()).toBeVisible();
+  expect(document.querySelector('[role="alert"]')).toBe(null);
+});
+it("selects published model frames and canonical details without source-shard requests", async () => {
+  useModeledFixture();
+  mount("?language=sume1241&year=1");
+  await expect.element(page.getByRole("heading", { name: "Modeled presence" })).toBeVisible();
+  await expect.element(page.getByText("Sumerian · learned and scribal")).toBeVisible();
+  await expect
+    .element(page.getByRole("img", { name: "Modeled language coverage across time" }))
+    .toBeVisible();
+  await page.getByRole("button", { name: "Timeline options" }).click();
+  await page.getByRole("spinbutton", { name: "Calendar year" }).fill("850");
+  await expect.element(page.getByText("Sumerian · synthetic alternative stage")).toBeVisible();
+  await page.getByRole("combobox", { name: "Reconstruction variant" }).selectOptions("bouckaert");
+  await expect
+    .poll(() => document.querySelector(".observation-details select")?.textContent)
+    .toContain("Sumerian");
+  expect(document.querySelector('[role="alert"]')).toBe(null);
+});
+it("clears an unavailable frame instead of displaying geography from the previous date", async () => {
+  const original = globalThis.fetch;
+  vi.spyOn(globalThis, "fetch").mockImplementation((input, init) => {
+    const path = String(input).replace("/v1/channel.json", "/v1/model-channel.json");
+    return path.includes("model/chang/800.json")
+      ? Promise.resolve(new Response("missing", { status: 404 }))
+      : original(path, init);
+  });
+  mount("?language=sume1241&year=1");
+  await expect.element(page.getByText("Sumerian · learned and scribal")).toBeVisible();
+  await page.getByRole("button", { name: "Timeline options" }).click();
+  await page.getByRole("spinbutton", { name: "Calendar year" }).fill("850");
+  await expect.element(page.getByText(/Historical frame unavailable/)).toBeVisible();
+  expect(document.querySelector(".observation-details")).toBe(null);
 });

@@ -4,7 +4,7 @@ import { estimatedYear } from "./time";
 
 export function acceptsClaim(
   row: { evidence: string; variant: string | null; dating: Dating },
-  state: AtlasState
+  state: Pick<AtlasState, "evidence" | "variant">
 ) {
   return (
     state.evidence.some((kind) => kind === row.evidence) &&

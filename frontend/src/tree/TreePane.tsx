@@ -18,14 +18,14 @@ export function TreePane({ model }: { model: WorkspaceModel }) {
         model.release.history.relationships,
         model.state.selected,
         model.state.datedTree,
-        model.state.variant
+        model.claimState.variant
       ),
     [
       model.nodes,
       model.release.history.relationships,
       model.state.selected,
       model.state.datedTree,
-      model.state.variant,
+      model.claimState.variant,
     ]
   );
   const root = useMemo(
@@ -59,6 +59,11 @@ export function TreePane({ model }: { model: WorkspaceModel }) {
       <TreeHeading model={model} root={root} />
       <TreeControls depth={depth} zoom={zoom} setDepth={setDepth} setZoom={setZoom} />
       <p className="pane-note">{context.caption}</p>
+      {model.frameEntry && (
+        <p className="pane-note">
+          Outlined nodes have an estimated distribution in the displayed frame.
+        </p>
+      )}
       <TreeViewport
         model={model}
         root={root}
@@ -180,6 +185,8 @@ function TreeNode({
       <circle
         r="4"
         fill={familyColor(model.nodes.get(node.data.id)?.family ?? node.data.id, node.depth)}
+        stroke={model.modeled.some((row) => row.subject === node.data.id) ? "#172c32" : "none"}
+        strokeWidth="2"
       />
       <foreignObject x="9" y="-15" width="170" height="31">
         <button

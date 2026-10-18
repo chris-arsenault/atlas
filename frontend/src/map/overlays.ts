@@ -11,7 +11,7 @@ export function ancestryFeatures(model: WorkspaceModel): GeoJSON.FeatureCollecti
     features: model.release.history.relationships
       .filter(
         (claim) =>
-          acceptsClaim(claim, model.state) &&
+          acceptsClaim(claim, model.claimState) &&
           (!selected || selected.has(`${claim.parent}>${claim.child}`)) &&
           activeDate(claim.dating, model.state.year)
       )
@@ -56,7 +56,8 @@ export function eventFeatures(model: WorkspaceModel): GeoJSON.FeatureCollection 
     type: "FeatureCollection",
     features: model.release.history.events
       .filter(
-        (event) => acceptsClaim(event, model.state) && activeDate(event.dating, model.state.year)
+        (event) =>
+          acceptsClaim(event, model.claimState) && activeDate(event.dating, model.state.year)
       )
       .filter((event) => event.id === model.state.event)
       .flatMap((event) =>

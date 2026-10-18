@@ -4,11 +4,13 @@ import { preview, type PreviewServer } from "vite";
 import { cpSync, mkdtempSync, symlinkSync, rmSync, mkdirSync } from "node:fs";
 import { resolve } from "node:path";
 import { prepareFixture } from "./fixtures";
+import { modelFrameSchema } from "../src/data/schema";
 
 let server: PreviewServer;
 let browser: Browser;
 let directory: string;
 let url: string;
+let reportedFallback = false;
 beforeAll(async () => {
   const data = resolve(process.env.ATLAS_DATA_DIR ?? prepareFixture(), "data");
   mkdirSync("../.cache", { recursive: true });
@@ -75,14 +77,15 @@ it("scrubs the complete release, restores its URL and keeps one calendar map usa
   try {
     await page.goto(`${url}?year=1000`);
     await page.getByRole("slider", { name: "Historical year" }).waitFor();
-    await page.getByRole("combobox", { name: "Mapped evidence at this date" }).waitFor();
+    await page.locator(".current-evidence").waitFor();
     expect(await page.getByRole("combobox", { name: "Historical time scale" }).count()).toBe(0);
     expect(await page.getByRole("combobox", { name: "Source layer" }).count()).toBe(0);
-    const writes = await page.evaluate(async () => {
+    const trace = await page.evaluateHandle(async () => {
+      const begin = performance.now();
       const replace = history.replaceState.bind(history);
-      let count = 0;
+      const measurement = { count: 0, elapsed: 0 };
       history.replaceState = (...args) => {
-        count++;
+        measurement.count++;
         replace(...args);
       };
       const slider = document.querySelector<HTMLInputElement>(
@@ -94,19 +97,22 @@ it("scrubs the complete release, restores its URL and keeps one calendar map usa
         slider.dispatchEvent(new Event("input", { bubbles: true }));
         await new Promise((resolve) => setTimeout(resolve, 12));
       }
-      await new Promise((resolve) => setTimeout(resolve, 600));
-      return count;
+      measurement.elapsed = performance.now() - begin;
+      return measurement;
     });
-    expect(writes).toBeLessThan(10);
-    expect(new URL(page.url()).searchParams.get("year")).toBe("779");
+    await page.waitForURL((address) => address.searchParams.get("year") === "779");
+    const writes = await trace.jsonValue();
+    await trace.dispose();
+    console.info("Full-release scrubbing", writes);
+    expect(writes.count).toBeLessThan(10);
     await page.getByRole("heading", { name: "779 CE", exact: true }).waitFor();
-    await page.getByRole("combobox", { name: "Mapped evidence at this date" }).waitFor();
+    await page.locator(".current-evidence").waitFor();
     await page.screenshot({
       path: `../.cache/atlas-calendar-${process.env.BROWSER ?? "chromium"}-desktop.png`,
     });
     await page.reload();
     await page.getByRole("heading", { name: "779 CE", exact: true }).waitFor();
-    await page.getByRole("combobox", { name: "Mapped evidence at this date" }).waitFor();
+    await page.locator(".current-evidence").waitFor();
     await page.setViewportSize({ width: 390, height: 844 });
     await page.waitForLoadState("networkidle");
     await page.screenshot({
@@ -117,6 +123,88 @@ it("scrubs the complete release, restores its URL and keeps one calendar map usa
     );
     expect(await page.getByRole("slider", { name: "Historical year" }).isVisible()).toBe(true);
     expect(errors).toEqual([]);
+  } finally {
+    await context.close();
+  }
+});
+
+it.runIf(!!process.env.ATLAS_DATA_DIR).each([
+  ["Latin", "lati1261", 1, "vernacular and written"],
+  ["Medieval Latin", "medi1250", 1200, "learned and written"],
+  ["Latin's medieval continuation", "lati1261", 1200, "learned and written"],
+  ["Old English", "olde1238", 800, "vernacular and written"],
+  ["English's Old English stage", "stan1293", 800, "vernacular and written"],
+  ["Sumerian vernacular", "sume1241", -1999, "vernacular and written"],
+  ["Sumerian learned continuation", "sume1241", 1, "learned and scribal"],
+  ["Egyptian", "egyp1246", -999, "successive Egyptian vernacular and written stages"],
+  ["Egyptian's Coptic continuation", "egyp1246", 1800, "liturgical"],
+  ["Bengali", "beng1280", 1000, "vernacular and written"],
+  ["Medieval French", "stan1290", 1000, "vernacular and written"],
+  ["French dispersal", "stan1290", 1700, "vernacular and written"],
+  ["Portuguese dispersal", "port1283", 1700, "vernacular and written"],
+  ["Dutch dispersal", "dutc1256", 1700, "vernacular and written"],
+  ["English before Australian settlement", "stan1293", 1700, "vernacular and written"],
+  ["English after Australian settlement", "stan1293", 1850, "vernacular and written"],
+  ["Nouchi", "nouc1234", 2000, "estimated contact-era presence"],
+  ["Yoruba geographic continuity", "yoru1245", 1700, "estimated language presence"],
+  ["Picard geographic continuity", "pica1241", 1700, "estimated language presence"],
+  ["Palenquero contact destination", "pale1260", 1700, "estimated language presence"],
+  ["Austronesian ancestry", "aust1307", -3999, "estimated language presence"],
+] as const)("renders %s from the complete modeled release", async (name, subject, year, use) => {
+  const context = await browser.newContext({
+    reducedMotion: "reduce",
+    viewport: { width: 1440, height: 900 },
+  });
+  const page = await context.newPage();
+  const errors: string[] = [];
+  page.on("pageerror", (error) => errors.push(error.message));
+  const geographicBounds: Record<string, [number, number, number, number]> = {
+    yoru1245: [-5, 4, 10, 12],
+    pica1241: [-1, 47, 7, 52],
+    pale1260: [-80, 5, -70, 15],
+  };
+  const bounds = geographicBounds[subject];
+  const geographicFrame = bounds
+    ? page.waitForResponse((response) => /\/model\/chang\/-?\d+\.json$/.test(response.url()))
+    : null;
+  try {
+    await page.goto(`${url}?language=${subject}&year=${year}`);
+    await page.getByRole("heading", { name: "Modeled presence", exact: true }).waitFor();
+    await page
+      .locator(".observation-details")
+      .getByText(new RegExp(`· ${use}$`))
+      .waitFor();
+    await page.getByRole("img", { name: "Modeled language coverage across time" }).waitFor();
+    if (geographicFrame) {
+      const artifact = await context.request.get((await geographicFrame).url());
+      const frame = modelFrameSchema.parse(await artifact.json());
+      const [longitude, latitude] = frame.observations.find((row) => row.subject === subject)!
+        .model!.point;
+      expect(longitude, name).toBeGreaterThan(bounds[0]);
+      expect(latitude, name).toBeGreaterThan(bounds[1]);
+      expect(longitude, name).toBeLessThan(bounds[2]);
+      expect(latitude, name).toBeLessThan(bounds[3]);
+    }
+    await page.waitForFunction(
+      () =>
+        !document.querySelector(".timeline-heading p")?.textContent?.includes("Updating") &&
+        document.querySelector(".map-pane")?.getAttribute("aria-busy") === "false"
+    );
+    await page.waitForLoadState("networkidle");
+    await page.screenshot({
+      path: `../.cache/atlas-model-${process.env.BROWSER ?? "chromium"}-${subject}-${year}.png`,
+    });
+    expect(errors, name).toEqual([]);
+    const unavailable = await page.locator(".map-fallback").count();
+    if (process.env.BROWSER === "firefox" && unavailable) {
+      await page.getByRole("heading", { name: "Map unavailable", exact: true }).waitFor();
+      await page.getByRole("region", { name: "Language genealogy", exact: true }).waitFor();
+      if (!reportedFallback)
+        console.info(
+          "Firefox runtime could not create WebGL; data, genealogy and the announced fallback remain available."
+        );
+      reportedFallback = true;
+    } else expect(unavailable, name).toBe(0);
   } finally {
     await context.close();
   }

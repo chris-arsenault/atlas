@@ -32,7 +32,7 @@ def stage_sources(root, name):
             for source in sources
             if source["id"] in {"glottolog", "glottolog-metadata", "atlas"}
         ]
-    return [source for source in sources if source["id"] not in {"glottolog-metadata", "atlas"}]
+    return [source for source in sources if source["id"] != "glottolog-metadata"]
 
 
 def upload_tree(client, bucket, directory, prefix):

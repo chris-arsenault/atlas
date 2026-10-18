@@ -102,17 +102,19 @@ export interface ViewResult {
 }
 export function query(
   index: CatalogueIndex,
-  release: Pick<Release, "observations" | "history">,
+  release: Pick<Release, "observations" | "history" | "model">,
   request: Query | ViewQuery
 ): Languoid[] | ViewResult {
   if (request.type === "search") return index.search(request.text);
   const rows = datedEvidence(release, request.state, index);
   const active = (row: { dating: Dating }) => activeDate(row.dating, request.state.year);
-  const dates = rows.flatMap((row) =>
-    row.dating.kind === "reference"
-      ? [row.dating.year!]
-      : [row.dating.start, row.dating.end].filter((year): year is number => year != null)
-  );
+  const dates = release.model
+    ? []
+    : rows.flatMap((row) =>
+        row.dating.kind === "reference"
+          ? [row.dating.year!]
+          : [row.dating.start, row.dating.end].filter((year): year is number => year != null)
+      );
   const nearestYear =
     dates
       .filter((year) => year >= firstYear && year <= referenceYear)
@@ -120,8 +122,11 @@ export function query(
     null;
   return {
     subjects: index.descendants(request.state.selected),
-    observations: activeObservations(release.observations, request.state, index),
-    coverage: coverage(rows),
+    observations:
+      release.model && request.state.year !== referenceYear
+        ? []
+        : activeObservations(release.observations, request.state, index),
+    coverage: release.model ? [] : coverage(rows),
     attestations: release.history.attestations
       .filter((row) => rows.includes(row) && active(row))
       .map((row) => row.id),
@@ -129,23 +134,23 @@ export function query(
       .filter((row) => rows.includes(row) && active(row))
       .map((row) => row.id),
     nearestYear,
-    boundaries: dateBoundaries(rows),
+    boundaries: release.model ? [] : dateBoundaries(rows),
   };
 }
 function datedEvidence(
-  release: Pick<Release, "observations" | "history">,
+  release: Pick<Release, "observations" | "history" | "model">,
   state: AtlasState,
   index: CatalogueIndex
 ) {
   const subjects = state.family ? isolatedSubjects(index, state.family) : null;
   return [
-    ...release.observations.filter((row) => row.layer !== "traditional"),
+    ...(release.model ? [] : release.observations.filter((row) => row.layer !== "traditional")),
     ...release.history.attestations,
     ...release.history.events,
   ].filter(
     (row) =>
       state.evidence.includes(row.evidence) &&
-      (!row.variant || state.variant === "all" || row.variant === state.variant) &&
+      acceptsVariant(row.variant, state.variant, release.model) &&
       (!subjects ||
         ("subject" in row
           ? subjects.has(row.subject)
@@ -153,6 +158,11 @@ function datedEvidence(
       row.dating.clock !== "model" &&
       row.dating.kind !== "undated"
   );
+}
+function acceptsVariant(variant: string | null, selected: string, model: Release["model"]) {
+  if (!model) return !variant || selected === "all" || variant === selected;
+  if (!variant || !(variant in model.scenarios)) return true;
+  return variant === (selected in model.scenarios ? selected : model.defaultScenario);
 }
 function coverage(rows: { dating: Dating }[]) {
   const span = (referenceYear - firstYear + 1) / 64;

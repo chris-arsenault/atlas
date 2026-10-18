@@ -7,7 +7,10 @@ export function Attestations({ model }: { model: WorkspaceModel }) {
     (row) =>
       row.subject === model.state.selected &&
       model.state.evidence.includes(row.evidence) &&
-      (!row.variant || model.state.variant === "all" || row.variant === model.state.variant)
+      (model.release.model ||
+        !row.variant ||
+        model.state.variant === "all" ||
+        row.variant === model.state.variant)
   );
   if (!claims.length) return null;
   return (

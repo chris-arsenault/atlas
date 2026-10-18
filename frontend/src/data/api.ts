@@ -5,6 +5,9 @@ import {
   observationSchema,
   historySchema,
   detailSchema,
+  modelIndexSchema,
+  modelFrameSchema,
+  type ModelFrameEntry,
   type Release,
 } from "./schema";
 
@@ -38,10 +41,11 @@ export async function loadRelease(signal: AbortSignal): Promise<Release> {
   if (!base.endsWith(`${manifest.release}/`)) throw new Error("Dataset release identity mismatch");
   const artifact = (name: string) =>
     staticJson(base + name, signal, manifest.artifacts[name].sha256);
-  const [nodes, observations, history] = await Promise.all([
+  const [nodes, observations, history, model] = await Promise.all([
     artifact("catalogue.json"),
     artifact("observations-index.json"),
     artifact("history.json"),
+    manifest.model ? artifact(manifest.model) : undefined,
   ]);
   return {
     manifest,
@@ -49,7 +53,30 @@ export async function loadRelease(signal: AbortSignal): Promise<Release> {
     nodes: z.array(nodeSchema).parse(nodes),
     observations: z.array(observationSchema).parse(observations),
     history: historySchema.parse(history),
+    model: model ? modelIndexSchema.parse(model) : undefined,
   };
+}
+
+export async function loadModelFrame(
+  release: Release,
+  entry: ModelFrameEntry,
+  signal: AbortSignal
+) {
+  const artifact = release.manifest.artifacts[entry.artifact];
+  if (!artifact || !/^model\/[\w-]+\/-?\d+\.json$/.test(entry.artifact))
+    throw new Error("Unsupported model frame artifact");
+  const frame = modelFrameSchema.parse(
+    await staticJson(release.base + entry.artifact, signal, artifact.sha256)
+  );
+  if (
+    frame.scenario !== entry.scenario ||
+    frame.start !== entry.start ||
+    frame.end !== entry.end ||
+    frame.year !== entry.year ||
+    frame.observations.length !== entry.count
+  )
+    throw new Error("Model frame identity mismatch");
+  return frame;
 }
 
 export async function loadDetail(release: Release, id: string, signal: AbortSignal) {

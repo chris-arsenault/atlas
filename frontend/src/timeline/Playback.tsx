@@ -39,7 +39,11 @@ export function Playback({ model }: { model: WorkspaceModel }) {
       <button onClick={() => step(false)} disabled={next === null}>
         Next date
       </button>
-      <small>Moves between dated evidence and gaps.</small>
+      <small>
+        {model.release.model
+          ? "Moves between published historical frames."
+          : "Moves between dated evidence and gaps."}
+      </small>
     </div>
   );
 }

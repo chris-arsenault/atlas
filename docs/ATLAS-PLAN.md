@@ -1,6 +1,191 @@
 # Historical language atlas implementation plan
 
-## Current contract: authored inputs and one calendar workspace — 2026-10-18
+## Modeled historical distributions — 2026-10-18
+
+The user explicitly requires modeling and extrapolation between sparse sources.
+This supersedes the earlier observation-only rendering and the prohibition on
+interpolation below. Approximate dates and geography are usable model inputs;
+uncertainty must be represented rather than used to remove the historical view.
+Production transformations remain in the independent pipeline, which deployment
+starts after code deployment. One calendar and one map remain the product surface.
+
+Root plan: `bae0461d-ef8c-498c-bf44-73aac744c828`.
+
+### Model contract
+
+Preserve source observations and phylogenies unchanged. Capture a versioned
+`data/historical/model.json` with source locks, mappings and claims. It contains
+the default reconstruction, temporal resolution, spatial and temporal priors,
+approximate family/subgroup calibrations, historical stages and expansion dates.
+Authored estimates identify their basis and source; numerical model choices are
+identified as assumptions rather than quoted research results.
+
+Build a dated lineage model from Glottolog classification, its historical time
+spans, dated phylogenetic internal nodes and authored calibrations. A sample's
+date anchors a sample, not the origin or extinction of its language. Historical
+period ranges constrain stage persistence; isolated dates are reference anchors
+with an explicit extrapolation policy. Retain single-year source metadata and
+source locators. Exclude bookkeeping and pseudo-family groupings from inferred
+genealogy without deleting their catalogue records.
+
+Between dated nodes, estimate an active lineage and interpolate its location
+toward descendants. Estimate otherwise unlocated ancestors from descendant
+locations and explicit homeland priors. Use broad diversification priors for
+uncalibrated branches, coalescing classification chains with no real branching.
+Carry sampled living lineages forward to the map reference endpoint. Combine
+these inferred lineages with named historical stages, including written or
+learned continuations where that is the modeled claim. The default is one
+coherent reconstruction; alternative study chronologies generate separate
+frames rather than being combined as independent confirmations.
+
+Generate approximate occupied regions from source areas where available and
+spatial kernels otherwise. Interpolate regions and use expansion assumptions
+for distant modern components instead of copying colonial distributions into
+antiquity. Spatial uncertainty grows away from anchors. Model envelopes express
+sensitivity/uncertainty, not statistically calibrated confidence percentages or
+exclusive linguistic territories. Land clipping and longitude wrapping belong
+in the producer. Overlap is retained.
+
+Publish century-resolution frames covering the existing timeline, a small frame
+index with counts and date ranges, and each frame's already computed geometry,
+canonical subject IDs, labels, inference method, sources and assumptions. Exact
+source records remain inspectable separately. The static browser selects and
+renders a published frame; it does not fit dates, move geometry, or run a model.
+Only the selected frame is loaded, using the existing integrity-checked static
+artifact path. Coverage describes modeled lineages and anchor support, not the
+number of overlapping node-date uncertainty intervals.
+
+### Milestones and acceptance
+
+- M0 (`5af5bd1b-2e79-42f6-b273-2b2b2ffdc68a`): establish this contract and
+  historical cases. Expansion `d647d818-3222-4be5-871a-1630b04e55a8`, step
+  `5fee79b6-1c32-4ba1-b2b1-e9f690360ef8`: source review and model assumptions.
+  Source bodies establish sample-date semantics (Chang Tables 7–8), approximate
+  family dates (Sagart 2019, Kolipakam 2018, Gray 2009), and the distinction
+  between Sumerian vernacular and later learned use (Oracc). Existing source
+  data provide global classification, representative locations and map areas.
+- M1 (`2cbb102a-7d2e-4f34-b974-7015b0626cd3`) [depends on M0]: implement
+  captured assumptions, preserved historical metadata, calibrated lineage
+  reconstruction, spatial extrapolation and deterministic published frames.
+  Test lineage persistence, interpolation, historical periods, alternate
+  chronologies, antimeridian handling and provenance. Inspect full global output.
+- M2 (`a47731b0-5dc0-4cae-b926-31a6d898fa3e`) [depends on M1]: connect
+  lazy static frames to map, canonical selections, timeline, genealogy and
+  explanation. Keep scrubbing and source inspection usable; remove obsolete
+  raw-node occupancy logic from the main historical view.
+- M3 (`daf0473b-917a-4108-9c7d-87854c7142e2`) [depends on M1, M2]: evaluate
+  Latin around 1 CE and its later continuations, Old English around 800 CE,
+  Sumerian around 2000 BCE and its learned continuation, Egyptian stages,
+  medieval Bengal, non-Indo-European family dispersals, colonial expansion,
+  and continuity between 2006 and the 2007 reference map. Verify what changes
+  when priors or study chronology change. Run fixture CI, full local data and
+  built-application browser journeys. Record material limitations here and in chat.
+
+Implementation and local acceptance are complete. Full-source and rendered
+checks corrected surface validity, historical selections, repeated rendering,
+contact-era geography and diaspora-biased homeland estimates. The Sulion plan
+above tracks operational publication and deployment-triggered refresh status.
+The global fallback is intentionally a coarse heuristic, not an assertion that
+all family homelands or diversification dates are known. Historical calibration
+and source-supported hypotheses override that fallback. Interpret outputs as
+estimated lineage distributions, not exhaustive census maps or exclusive borders.
+
+#### M1 execution
+
+Expansion `3d5b7258-1ec5-48aa-ba42-14cee501244b`.
+
+1. `ab8d07c2-51f7-4edb-b087-f92e491e4bd2`: preserve historical spans,
+   macroareas and record locators in `catalogue.py`; capture and validate model
+   configuration in `inputs.py`. Author priors and historical-stage anchors in
+   `data/historical/model.json`, with their basis and sensitivity parameters.
+   Verify exact input preservation and the distinction between a period and a
+   single reference year. Contemporary samples do not set language birth dates.
+2. `db778910-619f-4d51-aa30-cd6a9191bf96` [depends on #1]: implement
+   `reconstruction.py` using existing Shapely, source archives and canonical
+   classification. Generate separate chronology scenarios, lineage cuts,
+   geographic interpolation, model envelopes, and lazy static frame artifacts.
+   Wire assembly and source capture without a new runtime stage or backend.
+   Verify deterministic geometry, persistence, alternate chronology and boundary
+   cases; run full local generation and inspect representative frames.
+
+#### M2 execution
+
+Expansion `8f068efb-11e6-4915-a0bc-0c8ba1789f1c` completed. Fixture browser
+journeys pass in Chromium, Firefox and WebKit; complete-corpus acceptance is M3.
+
+1. Load the optional model index and selected frame through the existing
+   checksum-verified static artifact API. Select one chronology scenario, retain
+   old-release compatibility, cancel superseded requests and never display a
+   stale frame under a new date. Keep inference entirely in the producer.
+2. Render model regions in the existing map, connect canonical selections to
+   frame details, explain model methods and use/register, and show frame counts
+   rather than HPD overlap as coverage. Keep original observations inspectable.
+3. Exercise frame changes, source inspection, failed frame loading and rapid
+   scrubbing with synthetic browser cases, then inspect the full corpus.
+
+#### M3 execution
+
+Expansion `28075615-6288-4525-b12d-9900c7066dfe`. Full generation exposed mixed
+polygon/line fragments after clipping and rounding. Repair branch
+`fc2a9e3c-ef50-4f8b-8052-5203287e662b` extracts and repairs modeled surfaces,
+retaining a point when rounding collapses every component. Original source
+geometry remains unchanged. The formerly failing 1100 CE frame now emits
+4,470 valid rows; a regression covers mixed and collapsed components.
+
+Stage-correspondence branch `95bc340e-45b9-4f62-8eb6-ca96864b55a2` follows
+another acceptance finding: canonical English at 800 CE needs to resolve to
+Old English. Captured `continuations` now publish per-row `selectionSubjects`
+and provenance. Details, map focus and selected envelopes use those associations;
+browser inference from classification proximity is removed.
+
+Rendering branch `e872eb3f-e90a-4bb3-93f2-666e5d9970ec` follows a full-corpus
+drag that exceeded the existing 30-second browser-test limit. Geometry updates
+now depend on changed frames, filters or selection; point sources contain only
+points. Modeled releases skip unused raw-node coverage calculations. The static
+coverage chart and event options reuse their rendered values across date changes.
+The measured Chromium drag completed 180 inputs in 8.6 seconds with one history
+write; the complete reload/phone journey passed in 11.8 seconds. These are local
+measurements, not guaranteed frame rates. Selection frames published geometry
+using normal map viewport bounds; it does not change model coordinates.
+
+Contact repair `457a517d-2e4f-4e76-b84b-a1b6826a70a3` corrects a substantive
+geographic error: lexifier/contact groupings cannot use descendant centroids as
+ancestral homelands. Captured dispersal priors keep destinations stationary,
+constrain approximate contact onsets, and preserve European historical stages.
+Pipeline-generated selection associations exclude contact varieties before their
+modeled onset. Check French, Portuguese and Dutch alongside overseas descendants,
+historical-stage precedence, valid geometry and the full static product.
+Regional expansion repair `d69e4839-6561-47de-96f3-0010c80c328b` follows an
+observed full-source anachronism: English
+appeared in Australia in the 1600s when every overseas component shared 1600.
+Captured regional onsets now distinguish Australia (1788 settlement anchor),
+North America and later African/Pacific expansion. Where authored entry points
+exist, source components grow locally from their nearest point to that entry,
+rather than from continental interiors. No component travels across an ocean.
+Isolated source years now remain anchors through the configured extrapolation
+window on both sides; they do not impose immediate extinction at the sample date.
+
+Geographic-core repair `b9fa9c68-ec11-41bc-82e3-8f25ec2e23c9` follows rendered
+Atlantic positions for Yoruba, Picard and Western Flemish. Unweighted diaspora
+means are unsuitable homeland estimates. Unlocated groups now choose a regional
+descendant core near their inherited anchor and represent it with a member
+coordinate. Interpolation over water uses the destination anchor; actual source
+island coordinates survive omissions in the coarse land mask. Point markers use
+the same family colors and selection fading as regions. Verify full-source
+positions and rendered context, beyond geometry validity and DOM assertions.
+
+1. Inspect generated frames across periods and macroareas, checking canonical
+   historical selections, distinct written/vernacular continuations, colonial
+   components and sensitivity to chronology. Confirm preserved source metadata
+   and captured assumptions. Measure full generation and representative frame size.
+2. Exercise the built static product against the complete release in browser
+   engines, inspect desktop and phone screenshots, and verify meaningful source
+   details during scrubbing. Finish required code and clean-runtime checks.
+3. Keep generated data ignored. Publish code through the existing authorized
+   deployment path when applicable; its final pipeline trigger owns production
+   data generation. State publication and verification limits precisely.
+
+## Earlier contract: authored inputs and one calendar workspace — 2026-10-18
 
 Implementation plan: `aab8e314-4542-4aae-b1f5-17d0e21b7ddd`.
 The user approved capturing hand-authored data through the independent pipeline.

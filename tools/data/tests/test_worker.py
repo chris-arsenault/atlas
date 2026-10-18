@@ -33,6 +33,19 @@ def synthetic_inputs(root):
     )
     write_json(root / "data/mappings/glottolog.json", {})
     write_json(
+        root / "data/historical/model.json",
+        {
+            "schema": 1,
+            "id": "test",
+            "assumptions": ["Synthetic test"],
+            "parameters": {"frameYears": 100},
+            "calibrations": {},
+            "expansions": {},
+            "references": {},
+            "stages": {},
+        },
+    )
+    write_json(
         root / "data/historical/claims.json",
         {
             "schema": 1,
@@ -92,6 +105,7 @@ def test_layer_handoff_contains_only_inputs_needed_by_assembly(tmp_path, monkeyp
     assert {row["Key"].removeprefix(prefix) for row in objects} == set(worker.LAYER_OUTPUTS)
     assert {source["id"] for source in worker.stage_sources(root, "assemble")} == {
         "glottolog",
+        "atlas",
         "basemap",
         "bouckaert",
     }
@@ -180,6 +194,6 @@ def test_remote_capture_reads_every_file_at_one_resolved_commit(tmp_path, monkey
     manifest = inputs.capture_remote(tmp_path, "owner/repo", resolved)
     assert manifest["commit"] == commit
     assert manifest["kind"] == "git"
-    assert len(urls) == 4
+    assert len(urls) == 5
     assert urls[0].endswith("/commits/data%2Freviewed")
     assert inputs.verify_snapshot(tmp_path) == manifest

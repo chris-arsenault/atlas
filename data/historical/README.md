@@ -14,10 +14,56 @@ Glottolog subgroup. The conventional classification stays available separately.
 
 Bouckaert's Bayesian phylogeographic model includes ancestral locations;
 Chang's ancestry-constrained lexical model has no corresponding inferred
-geography in the supplied summary. The application must show that gap when
-selecting the Chang alternative. Locations and uncertainty contours describe
-model nodes, not continuously occupied territories or demonstrated migration
-routes. Do not extrapolate a node location along its branches.
+geography in the supplied summary. Its source records retain that gap. Atlas's
+separate reconstruction layer estimates geography from canonical classification,
+representative locations and authored homeland assumptions. Source node locations
+and contours remain source estimates; Atlas frames are explicitly derived models.
+
+`model.json` is a captured authored input, alongside `claims.json`. It supplies
+approximate chronology and homeland priors, historical-stage windows, regional
+kernels and expansion assumptions. The independent pipeline fits lineage dates,
+interpolates locations and generates static dated frames. This deliberately
+extrapolates between sparse observations. Uncalibrated chronology uses branching
+depth and a weak family-age prior; it is not a research result. Regional kernels
+are authored approximations, not transcriptions of source boundaries. Calibration
+uncertainty widens heuristic spatial envelopes; these are not probability contours.
+Unlocated groups use a descendant core near the inherited regional anchor;
+member coordinates represent that core without averaging diaspora across oceans.
+Interpolation is local and constrained by land. Longer gaps and water crossings
+use destination continuity priors. Actual source island coordinates remain points
+when the coarse land mask omits their islands.
+Historical stages can overlap, including learned and liturgical continuation.
+Modern distant components grow at their destinations after expansion priors;
+they do not slide across oceans as supposed occupied migration routes.
+Regional expansion onsets distinguish, for example, English in North America
+from later settlement in Australia and the Pacific. Authored coastal entry
+anchors guide local growth within source components rather than starting every
+continent at its modern geographic center. These remain coarse scenarios.
+Contact/lexifier groupings use separate dispersal priors: descendants appear at
+destination anchors after approximate contact onsets. Their modern coordinate
+averages do not define ancestral homelands. Historical periods and primary
+language continuity remain distinct from the later contact varieties. Late
+varieties such as Nouchi cannot acquire medieval presence through a taxonomy link.
+
+Chronology scenarios remain separate. Chang is the preferred Indo-European
+chronology; Bouckaert supplies an alternative. Neither calibrates every family.
+The global reconstruction therefore includes much weaker classification priors,
+identified in frame details. The browser selects checksum-verified frames without
+fitting dates or transforming geography. Raw observations remain inspectable.
+
+The release manifest names `model/index.json`. Its scenario/frame entries point
+to checksum-listed JSON artifacts containing canonical subjects and computed
+geometries, envelopes, labels, methods and calibration provenance. Frames usually
+span a century, with extra boundaries for historical stages and regional/contact
+onsets.
+Each frame records its evaluation year; selecting a year selects that published
+approximation. The browser keeps the current frame and uses the HTTP cache when
+returning to another frame. It never generates intermediate geometry.
+Authored `continuations` connect canonical selections to earlier or later named
+stages, with citations and a stated basis. Frames publish `selectionSubjects`
+and the correspondence provenance. English at 800 CE can therefore select Old
+English, and Latin at 1200 CE can select Medieval Latin, without the browser
+guessing a relationship from proximity in the classification tree.
 
 The calibration XML expresses ages backwards from a model present. The primary
 publications establish that present as 2000 CE: Chang, printed p. 195 footnote 1

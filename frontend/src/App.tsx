@@ -133,11 +133,13 @@ function Sources({ model, close }: { model: WorkspaceModel; close: () => void })
       </ul>
       <h3>Dates and coverage</h3>
       <p>
-        The timeline displays published calendar dates as BCE and CE. Points and contours show
-        reconstructed node locations and uncertainty, not language territories. The 2007 endpoint
-        shows the Atlas reference map; undated traditional maps remain inspectable in each
-        language&apos;s source records.
+        The timeline displays published calendar dates as BCE and CE. Historical regions estimate
+        language presence between sparse observations. They overlap and include authored priors;
+        their envelopes are model sensitivity, not measured confidence. The 2007 endpoint shows the
+        Atlas reference map; undated traditional maps remain inspectable in each language&apos;s
+        source records.
       </p>
+      <ModelExplanation model={model} />
       <h3>Known gaps</h3>
       <ul>
         {model.release.manifest.coverage.gaps.map((gap) => (
@@ -149,5 +151,30 @@ function Sources({ model, close }: { model: WorkspaceModel; close: () => void })
         language&apos;s absence at a historical date does not establish its extinction.
       </p>
     </dialog>
+  );
+}
+
+function ModelExplanation({ model }: { model: WorkspaceModel }) {
+  const index = model.release.model;
+  if (!index) return null;
+  return (
+    <>
+      <h3>How historical presence is estimated</h3>
+      <p>{index.description}</p>
+      <ul>
+        {index.assumptions.map((assumption) => (
+          <li key={assumption}>{assumption}</li>
+        ))}
+      </ul>
+      <ul>
+        {Object.entries(index.references).map(([id, source]) => (
+          <li key={id}>
+            <a href={source.reference} target="_blank" rel="noreferrer">
+              {source.citation}
+            </a>
+          </li>
+        ))}
+      </ul>
+    </>
   );
 }

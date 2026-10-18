@@ -9,6 +9,7 @@ from .geography import import_layer
 from .history import load_history, source_list
 from .inputs import INPUT_FILES, capture_local, validate_inputs, verify_snapshot
 from .io import digest, encode, fetch, read_json, write_json
+from .reconstruction import generate_model
 from .tiles import compile_tiles, inspect_tiles
 
 LAYERS = ("contemporary", "traditional")
@@ -72,6 +73,7 @@ def assemble(root: Path, cache: Path, work: Path, destination: Path, *, code_roo
     observations.extend(history["observations"])
     validate_hierarchy(nodes)
     validate_claims(nodes, observations, history)
+    reconstruction = generate_model(root, cache, nodes, history, stage)
     write_json(stage / "catalogue.json", sorted(nodes.values(), key=lambda node: node["id"]))
     write_json(stage / "history.json", history)
     publish_observations(stage, observations)
@@ -86,11 +88,20 @@ def assemble(root: Path, cache: Path, work: Path, destination: Path, *, code_roo
     manifest = {
         "schema": 1,
         "dataContract": "calendar-v1",
+        "model": "model/index.json",
         "inputs": inputs,
         "build": build_code,
         "sources": list(
             {source["id"]: source for source in source_list(root) + history["sources"]}.values()
-        ),
+        )
+        + [
+            {
+                "id": "atlas-model",
+                "citation": f"Atlas {reconstruction['id']}: pipeline reconstruction with explicit model assumptions.",
+                "reference": "https://github.com/chris-arsenault/atlas/blob/main/data/historical/model.json",
+                "license": "Derived source data with attribution; authored model assumptions.",
+            }
+        ],
         "tools": sources["tools"],
         "artifacts": artifacts,
         "counts": {"catalogue": len(nodes), "observations": len(observations), "layers": counts},
@@ -112,7 +123,8 @@ def assemble(root: Path, cache: Path, work: Path, destination: Path, *, code_roo
                 "Source maps do not exhaustively record multilingualism.",
                 "Contemporary areas are a 2007 reference snapshot, not evidence of continuous occupation. Undated traditional areas remain source records, not calendar-dated territories.",
                 "Reconstructed node date intervals describe uncertainty, not continuous occupation. Calendar dating references and epochs remain attached to each source.",
-                "Calendar contact evidence is initially limited to Bengal. Migration, territorial expansion, language shift and extinction events lack reviewed source coverage.",
+                "Reviewed contact events are initially limited to Bengal. Modeled dispersal and colonial expansion use explicit priors rather than a complete historical event inventory.",
+                "Global chronology outside the dated Indo-European studies and selected family calibrations relies heavily on classification and continuity priors. Regions are approximations, not exhaustive linguistic borders.",
                 "Contact evidence without historical coordinates has no geographic route. Ancestry links connect model node estimates, not documented journeys.",
             ],
         },

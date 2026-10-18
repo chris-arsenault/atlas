@@ -46,6 +46,9 @@ def load_catalogue(cache):
                     aliases.update(name.strip() for name in value.splitlines() if name.strip())
             nodes[identifier]["aliases"] = sorted(aliases - {nodes[identifier]["name"]})
             nodes[identifier]["status"] = config.get("endangerment", "status", fallback="unknown")
+            nodes[identifier]["historicalSpan"] = config.get("core", "timespan", fallback=None)
+            nodes[identifier]["macroareas"] = config.get("core", "macroareas", fallback="").split()
+            nodes[identifier]["sourceRecord"] = member
     validate_hierarchy(nodes)
     return nodes
 

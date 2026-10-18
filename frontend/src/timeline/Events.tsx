@@ -1,17 +1,33 @@
 import type { WorkspaceModel } from "../atlas/useWorkspace";
+import { useMemo } from "react";
 import type { HistoricalEvent } from "../data/schema";
 import { acceptsClaim, eventYear } from "./events";
 import { datingLabel, timeLabel } from "./time";
 
 export function Events({ model }: { model: WorkspaceModel }) {
-  const rows = model.release.history.events
-    .filter(
-      (event) =>
-        acceptsClaim(event, model.state) &&
-        (!model.state.family ||
-          event.participants.some((id) => model.nodes.get(id)?.family === model.state.family))
-    )
-    .sort((a, b) => eventYear(a) - eventYear(b));
+  const { evidence, variant, family } = model.claimState;
+  const { nodes } = model;
+  const events = model.release.history.events;
+  const rows = useMemo(
+    () =>
+      events
+        .filter(
+          (event) =>
+            acceptsClaim(event, { evidence, variant }) &&
+            (!family || event.participants.some((id) => nodes.get(id)?.family === family))
+        )
+        .sort((a, b) => eventYear(a) - eventYear(b)),
+    [events, evidence, variant, family, nodes]
+  );
+  const options = useMemo(
+    () =>
+      rows.map((event) => (
+        <option key={event.id} value={event.id}>
+          {timeLabel(eventYear(event))} · {event.name}
+        </option>
+      )),
+    [rows]
+  );
   const chosen = rows.find((event) => event.id === model.state.event);
   const choose = (id: string) => {
     const event = rows.find((row) => row.id === id);
@@ -32,11 +48,7 @@ export function Events({ model }: { model: WorkspaceModel }) {
             onChange={(event) => choose(event.target.value)}
           >
             <option value="">Choose a source event…</option>
-            {rows.map((event) => (
-              <option key={event.id} value={event.id}>
-                {timeLabel(eventYear(event))} · {event.name}
-              </option>
-            ))}
+            {options}
           </select>
         </label>
       </details>
@@ -52,6 +64,9 @@ function CurrentEvidence({ model }: { model: WorkspaceModel }) {
   const events = model.release.history.events.filter((row) => model.view?.events.includes(row.id));
   return (
     <div className="current-evidence" aria-label="Evidence at this date">
+      {model.frameEntry && (
+        <small>Estimated regions · use search or select the map to inspect a lineage.</small>
+      )}
       {observations.length > 0 && (
         <label>
           Mapped evidence{" "}

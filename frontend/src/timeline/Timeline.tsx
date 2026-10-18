@@ -45,6 +45,7 @@ export function Timeline({ model }: { model: WorkspaceModel }) {
 }
 function TimelineHeading({ model }: { model: WorkspaceModel }) {
   const label = timeLabel(model.state.year);
+  const geography = model.frameEntry ? "estimated regions" : "mapped";
   return (
     <div className="timeline-heading">
       <div>
@@ -57,7 +58,7 @@ function TimelineHeading({ model }: { model: WorkspaceModel }) {
       <p>
         {model.indexing
           ? "Updating evidence…"
-          : `${model.view?.observations.length ?? 0} mapped · ${model.view?.attestations.length ?? 0} written · ${model.view?.events.length ?? 0} events`}
+          : `${model.view?.observations.length ?? 0} ${geography} · ${model.view?.attestations.length ?? 0} written · ${model.view?.events.length ?? 0} events`}
       </p>
     </div>
   );
@@ -96,10 +97,12 @@ function TimeNotice({ model }: { model: WorkspaceModel }) {
     <>
       {model.state.year === referenceYear && (
         <p className="clock-note">
-          Published Atlas snapshot (2007). Earlier dates show historical evidence.
+          Published Atlas snapshot (2007). Earlier dates show{" "}
+          {model.release.model ? "modeled historical presence" : "historical evidence"}.
         </p>
       )}
-      {!model.indexing && !model.view?.observations.length && (
+      <FrameNotice model={model} />
+      {!model.indexing && !model.frameError && !model.view?.observations.length && (
         <p className="coverage-gap" role="status">
           No mapped evidence for this date
           {hasOtherEvidence
@@ -107,6 +110,24 @@ function TimeNotice({ model }: { model: WorkspaceModel }) {
             : " and these filters"}
           .
           <NearestEvidence model={model} />
+        </p>
+      )}
+    </>
+  );
+}
+function FrameNotice({ model }: { model: WorkspaceModel }) {
+  return (
+    <>
+      {model.frameEntry && (
+        <p className="clock-note">
+          Estimated frame: {timeLabel(model.frameEntry.start)}–{timeLabel(model.frameEntry.end)}.
+          Evaluated at {timeLabel(model.frameEntry.year)}; approximate regions may overlap.
+        </p>
+      )}
+      {model.frameError && (
+        <p role="alert">
+          Historical frame unavailable.{" "}
+          <button onClick={() => model.retryFrame()}>Retry frame</button>
         </p>
       )}
     </>
