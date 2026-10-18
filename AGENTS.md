@@ -6,7 +6,8 @@ infrastructure belongs in Ahara; linguistic data processing belongs here.
 
 - The browser talks only to static files. Never add an application backend.
 - Production data processing runs through Scheduler/Step Functions/Lambda,
-  independently of CI and frontend deployment.
+  outside CI. After a successful deployment, CI starts the pipeline for the
+  deployed Git revision as its final step; workers transform and publish data.
 - Preserve every source row, unresolved join, overlap, date label, and citation.
   A source coordinate is a point, and an undated area is not historical evidence.
 - Authored files use native editing. Source archives and generated releases stay

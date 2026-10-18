@@ -25,3 +25,21 @@ jobs:
           version: "0.12.3"
       - name: Check data adapters
         run: make data-test
+  refresh-data:
+    needs: application
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: ${{ secrets.OIDC_ROLE }}
+          role-session-name: AtlasDataRefresh-${{ github.run_id }}
+          aws-region: us-east-1
+      - name: Start data pipeline for the deployed revision
+        env:
+          DATA_REVISION: ${{ github.sha }}
+        run: |
+          account_id="$(aws sts get-caller-identity --query Account --output text)"
+          aws stepfunctions start-execution \
+            --state-machine-arn "arn:aws:states:${AWS_REGION}:${account_id}:stateMachine:atlas-pipeline-languages" \
+            --input "{\"revision\":\"${DATA_REVISION}\"}"

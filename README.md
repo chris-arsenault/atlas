@@ -60,6 +60,11 @@ authored source input in Git. CI validates these files without fetching archives
 producing releases, or publishing data. The Lambda ZIP contains code and tools;
 it does not contain these inputs.
 
+After a successful code deployment, the final CI job starts the independent
+pipeline with the deployed Git SHA. Scheduled and operator executions also remain
+available. CI starts the execution; pipeline workers perform all source fetching,
+transformations, validation and data publication.
+
 At source capture, the independent pipeline resolves its configured `main` ref
 (or an execution's `revision`) to one commit. It persists that commit before
 downloading inputs, records every input file's SHA-256, and stores the exact
@@ -122,10 +127,12 @@ ln -s ../ahara-tf-patterns .ahara-tf-patterns
 After Atlas's adapter tests pass, Ahara runs the browser/code checks, builds the
 ZIP through its existing Python `scripts/build-lambda.sh` hook, builds the
 frontend, applies the single Atlas Terraform state, and publishes dashboards.
-Atlas has no custom
-AWS deploy job or deploy script. Terraform owns the hostname and schedule
-configuration. The schedule defaults to disabled. CI never starts a data
-refresh as a side effect.
+The final Atlas job starts `atlas-pipeline-languages` with the deployed commit
+as its `revision`. Pull requests and failed deployments do not start a refresh.
+The job returns the execution ARN without waiting for data processing to finish;
+the pipeline validates and publishes the release before advancing the channel.
+Terraform owns the hostname and schedule configuration. The schedule defaults
+to disabled; the deployment trigger operates independently of that schedule.
 
 Operators start/inspect/stop/redrive executions with ordinary AWS tools:
 
@@ -140,8 +147,8 @@ aws dynamodb get-item --table-name ahara-pipeline-jobs \
 ```
 
 The second start example selects an exact authored revision; use one start
-command for the intended run. Neither committing inputs nor deploying code
-starts these executions or updates the data channel.
+command for the intended manual run. Successful deployments start this same
+pipeline automatically. CI does not build a dataset or update the data channel.
 
 In this environment, use the pre-wrapped `aws` command or `with-cred -- aws`;
 other installations can use their ordinary AWS credential configuration. Worker stages and

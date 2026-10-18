@@ -1,6 +1,6 @@
 # Historical language atlas implementation plan
 
-## Current contract: authored inputs and one calendar workspace — 2026-10-17
+## Current contract: authored inputs and one calendar workspace — 2026-10-18
 
 Implementation plan: `aab8e314-4542-4aae-b1f5-17d0e21b7ddd`.
 The user approved capturing hand-authored data through the independent pipeline.
@@ -8,8 +8,10 @@ This supersedes worker-bundled editorial input and browser compatibility
 conversions. Earlier milestone descriptions below record historical behavior.
 
 Authored claims, identifier mappings and the source lock are versioned source
-inputs in Git. CI validates them with fixtures. It never refreshes production
-data, uploads generated releases or advances the channel. The worker ZIP contains
+inputs in Git. CI validates them with fixtures and deploys code.
+After successful deployment, its final job starts the existing pipeline with
+the deployed Git SHA. Pipeline workers fetch, transform, validate and publish
+the data; CI only triggers that execution. The worker ZIP contains
 code, locked dependencies and the compiler, with no `data/` tree.
 
 Source capture resolves the configured public repository ref, or an execution's
@@ -26,7 +28,8 @@ validation. The static browser requires the published `calendar-v1` contract;
 it formats dates and queries evidence without source-lock imports, epoch
 conversion, rewritten notes or suppressed coverage gaps. Older incompatible
 releases require an independent pipeline refresh and produce a clear loading
-error until then. Commits and frontend deployments never perform that refresh.
+error until then. Successful deployments trigger that independent refresh;
+scheduled and manual pipeline executions remain available.
 
 Retain one map, one BCE/CE timeline, source inspection, uncertainty, alternatives,
 and debounced URL persistence. Epoch citations live with captured input metadata
@@ -112,7 +115,8 @@ Search, filtering, spatial selection, tree traversal, and temporal queries run i
 the browser. Data import, geometry processing, and tile generation run as
 independently scheduled Ahara pipelines. PostgreSQL, PostGIS, API services, and
 runtime tile servers from the supplied design are replaced by published static
-files. CI tests and deploys code; it does not operate the production data pipeline.
+files. CI tests and deploys code, then starts the production data pipeline as
+its final job. Data transformations and publication run in the pipeline workers.
 
 The shared Ahara OG server supplies the HTML shell with static site metadata and
 a preview image for crawlers. It does not read or query the language data; browser
@@ -260,7 +264,8 @@ available reconstruction variants. Immutable data URLs include a content-derived
 release identifier. The browser resolves `/data/v1/channel.json` once per session
 and pins the compatible manifest it selects. That small channel has zero CDN
 TTL and no-store headers; the referenced release objects are cached as immutable.
-Dataset refresh and rollback are independent of the frontend build/deployment.
+Dataset refresh and rollback execute in the data pipeline. Successful frontend
+deployments start a refresh for their Git revision as the final deployment step.
 The application never mixes release files midway through a session.
 
 Initial performance targets, to be measured and revised with recorded evidence
@@ -377,8 +382,10 @@ in `AGENTS.md`.
   ordinary prerequisite jobs where the existing stack contract needs it.
   Browser journeys also gate application deployment.
 - `pnpm build` builds only the frontend. It neither produces the full dataset
-  nor starts a remote refresh. Pipeline schedules and operator commands own
-  production runs, validation, and publication independently of GitHub Actions.
+  nor starts a remote refresh. After code deployment succeeds, a final CI job
+  starts the existing pipeline for the deployed Git SHA. Pipeline workers own
+  production processing, validation and publication; schedules and operator
+  commands can also start executions.
 - The shared workflow invokes ESLint, TypeScript, and Vitest directly before its
   build. Keep their configuration and pure domain tests independent of generated
   production data. The manifest schema is a checked-in typed protocol, loaded
@@ -678,8 +685,9 @@ Ahara deployer role must be published/applied before an Atlas deployment.
 
 Acceptance: the application build contains only public application assets and
 consumes an independently published compatible dataset through its static
-channel. Shared CI tests and deploys code without running the production data
-pipeline. Terraform owns application objects and hosting/compute definitions,
+channel. Shared CI tests and deploys code; the final Atlas job starts the
+production data pipeline. Data transformations run outside the CI runner.
+Terraform owns application objects and hosting/compute definitions,
 while pipeline output objects remain separately owned. Required cross-repo edits
 exist and pass their applicable local checks. Deployment instructions preserve the
 actual dependency order and identify unpublished prerequisites.
@@ -915,8 +923,8 @@ in `ahara-tf-patterns` only where this concrete consumer needs it.
 
 Acceptance: all available source records remain accounted for with provenance,
 correct geometry/dates, and real tile reads. A failed run before manifest update
-leaves the previous release selected. Frontend deployment does not run the
-pipeline, and frontend Terraform cannot upload/prune its output objects. Clients
+leaves the previous release selected. Frontend deployment starts the pipeline
+after success; frontend Terraform cannot upload/prune its output objects. Clients
 pin a complete compatible release for their session. No benchmark prerequisite,
 publication transaction service, approval workflow, or automatic rollback service.
 

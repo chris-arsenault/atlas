@@ -1,5 +1,5 @@
 {
-  "Comment": "Atlas-owned full-source build and publication. No CI refresh trigger.",
+  "Comment": "Atlas-owned full-source build and publication, started by Scheduler, operators, or successful code deployment.",
   "StartAt": "CaptureSources",
   "States": {
     "CaptureSources": {
