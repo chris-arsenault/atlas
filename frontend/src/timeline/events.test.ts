@@ -1,5 +1,6 @@
 import { expect, it } from "vitest";
-import { evidenceBoundaries, nextBoundary } from "./events";
+import { nextBoundary } from "./events";
+import { dateBoundaries } from "./time";
 import { defaultState } from "../atlas/state";
 import type { History } from "../data/schema";
 
@@ -21,11 +22,11 @@ it("steps into and out of actual evidence intervals without interpolating geomet
       },
     ],
   };
-  const state = { ...defaultState, layer: "historical" as const, year: 1000 };
-  const years = evidenceBoundaries(history, state);
-  expect(years).toEqual([-2999, 800, 1100, 2026]);
+  const state = { ...defaultState, year: 1000 };
+  const years = dateBoundaries(history.attestations);
+  expect(years).toEqual([-9999, 800, 1100, 2007]);
   expect(nextBoundary(years, state)).toBe(1100);
   expect(nextBoundary(years, state, true)).toBe(800);
-  expect(evidenceBoundaries(history, { ...state, evidence: [] })).toEqual([-2999, 2026]);
-  expect(nextBoundary([14000, 2000, 500, 0], { ...state, clock: "model", year: 2000 })).toBe(500);
+  expect(dateBoundaries([])).toEqual([-9999, 2007]);
+  expect(nextBoundary([-5000, 0, 500, 2000], { ...state, year: 500 })).toBe(2000);
 });

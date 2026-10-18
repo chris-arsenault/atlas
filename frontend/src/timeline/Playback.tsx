@@ -1,16 +1,14 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import type { WorkspaceModel } from "../atlas/useWorkspace";
-import { evidenceBoundaries, nextBoundary } from "./events";
+import { nextBoundary } from "./events";
+import { timelineBounds } from "./time";
 
 export function Playback({ model }: { model: WorkspaceModel }) {
   const { state, dispatch } = model;
   const [token, setToken] = useState<string | null>(null);
-  const context = JSON.stringify([state.clock, state.variant, state.evidence, state.layer]);
+  const context = JSON.stringify([state.variant, state.evidence, state.family]);
   const playing = token === context;
-  const years = useMemo(
-    () => evidenceBoundaries(model.release.history, state),
-    [model.release, state]
-  );
+  const years = model.view?.boundaries ?? timelineBounds();
   const next = nextBoundary(years, state);
   useEffect(() => {
     if (!playing) return;
@@ -29,19 +27,19 @@ export function Playback({ model }: { model: WorkspaceModel }) {
   return (
     <div className="playback" aria-label="Evidence playback">
       <button onClick={() => step(true)} disabled={nextBoundary(years, state, true) === null}>
-        Previous boundary
+        Previous date
       </button>
       <button
         onClick={() => setToken(playing ? null : context)}
         disabled={next === null}
         aria-pressed={playing}
       >
-        {playing ? "Pause playback" : "Play evidence"}
+        {playing ? "Pause playback" : "Play timeline"}
       </button>
       <button onClick={() => step(false)} disabled={next === null}>
-        Next boundary
+        Next date
       </button>
-      <small>Steps through source intervals and gaps. No boundary interpolation.</small>
+      <small>Moves between dated evidence and gaps.</small>
     </div>
   );
 }

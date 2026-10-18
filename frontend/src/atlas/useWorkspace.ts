@@ -14,23 +14,29 @@ export function useWorkspace(release: Release) {
     staleTime: Infinity,
   });
   const view = useQuery({
-    queryKey: [
-      "view",
-      state.selected,
-      state.family,
-      state.layer,
-      state.year,
-      state.clock,
-      state.evidence,
-      state.variant,
-    ],
+    queryKey: ["view", state.selected, state.family, state.year, state.evidence, state.variant],
     queryFn: () => worker.data!.view(state),
     enabled: !!worker.data,
     staleTime: Infinity,
     gcTime: 60_000,
   });
   useEffect(() => {
-    history.replaceState(null, "", toUrl(state));
+    const url = toUrl(state);
+    const timer = setTimeout(() => {
+      if (location.search === url) return;
+      try {
+        history.replaceState(history.state, "", `${location.pathname}${url}${location.hash}`);
+      } catch (error) {
+        // URL persistence must never take down exploration, including Safari quotas.
+        if (!(error instanceof DOMException && error.name === "SecurityError")) throw error;
+      }
+    }, 400);
+    const cancel = () => clearTimeout(timer);
+    window.addEventListener("popstate", cancel);
+    return () => {
+      cancel();
+      window.removeEventListener("popstate", cancel);
+    };
   }, [state]);
   useEffect(() => {
     const restore = () => dispatch({ type: "patch", patch: fromUrl(location.search) });

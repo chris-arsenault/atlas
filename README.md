@@ -9,6 +9,15 @@ static site metadata. Icons and the preview image live in `frontend/public/`;
 the application and datasets still load directly from S3 through CloudFront.
 The OG server does not query a database or process Atlas data.
 
+The workspace has one map and one BCE/CE timeline. Its 2007 endpoint shows the
+Atlas reference snapshot. Earlier dates show sourced reconstructed locations,
+written attestations and events, with coverage marks and navigation to nearby
+evidence. Indo-European reconstructions retain date and location uncertainty;
+they are not historical territories. Source and alternative filters live in
+evidence options. Undated traditional maps remain accessible through each
+language's source records. Scrubbing updates the view immediately and saves a
+shareable URL after interaction settles.
+
 The data pipeline is EventBridge Scheduler → Step Functions Standard → Python
 Lambda. Ahara owns the shared DynamoDB registration/status tables, status
 recorder and central observability. Atlas owns the workflow, worker, sources,
@@ -45,8 +54,27 @@ Local serving checks do not establish deployed CloudFront behavior.
 
 ## Data ownership
 
-`data/sources.lock.json` pins upstream archives and checksums. Production
-fetches them at run time, captures them in S3 and verifies them before use.
+`data/sources.lock.json` pins upstream archives and checksums. Along with
+`data/mappings/glottolog.json` and `data/historical/claims.json`, it is an
+authored source input in Git. CI validates these files without fetching archives,
+producing releases, or publishing data. The Lambda ZIP contains code and tools;
+it does not contain these inputs.
+
+At source capture, the independent pipeline resolves its configured `main` ref
+(or an execution's `revision`) to one commit. It persists that commit before
+downloading inputs, records every input file's SHA-256, and stores the exact
+snapshot under `sources/authored/` beside captured upstream archives. Retries
+retain the first resolved revision. Import and assembly stages read and verify
+that snapshot, never a moving Git ref or packaged data. A release includes the
+input files, commit, and checksums as immutable artifacts. Editing an input does
+not publish a release or require rebuilding worker code.
+
+Date normalization, source joins and corrections belong in the pipeline. The
+browser reads the published `calendar-v1` contract, formats years as BCE/CE and
+queries those records. It does not import source configuration or reinterpret
+older releases. An incompatible release produces an explicit dataset error
+until an independent pipeline execution publishes compatible data.
+
 Downloaded sources, intermediate files and complete releases stay in ignored
 `.cache/` directories locally and in the data bucket in production. The
 frontend build excludes data files. Tiny synthetic browser cases live in
@@ -60,7 +88,12 @@ See [historical source semantics](data/historical/README.md).
 
 For a full local data build, install the pinned Tippecanoe 2.79.0 compiler on
 `PATH`, then run `make data`. This fetches complete pinned sources independently
-of CI. To consume that output in browser tests, set
+of CI and captures the current authored files once. Its provenance explicitly
+says `working-tree`, with the base commit and exact file checksums; it does not
+claim uncommitted input is a Git revision. For separate local stages, run
+`uv run --project tools/data atlas-data fetch` first; `layer` and `assemble`
+reuse `.cache/work/inputs`.
+Local commands never publish. To consume that output in browser tests, set
 `ATLAS_DATA_DIR=/work/.cache/site` in the browser container. `test:release` works
 against either the tiny synthetic fixture or that complete prebuilt release.
 
@@ -98,14 +131,20 @@ Operators start/inspect/stop/redrive executions with ordinary AWS tools:
 
 ```bash
 aws stepfunctions start-execution --state-machine-arn WORKFLOW_ARN --input '{}'
+aws stepfunctions start-execution --state-machine-arn WORKFLOW_ARN \
+  --input '{"revision":"FULL_GIT_COMMIT_SHA"}'
 aws stepfunctions describe-execution --execution-arn EXECUTION_ARN
 aws stepfunctions get-execution-history --execution-arn EXECUTION_ARN
 aws dynamodb get-item --table-name ahara-pipeline-jobs \
   --key '{"execution_arn":{"S":"EXECUTION_ARN"}}'
 ```
 
-In this environment, prefix AWS commands with `with-cred --`; other installations
-can use their ordinary AWS credential configuration. Worker stages and
+The second start example selects an exact authored revision; use one start
+command for the intended run. Neither committing inputs nor deploying code
+starts these executions or updates the data channel.
+
+In this environment, use the pre-wrapped `aws` command or `with-cred -- aws`;
+other installations can use their ordinary AWS credential configuration. Worker stages and
 workflow outcomes appear in the existing Ahara Grafana/Loki/Tempo paths. The
 shared DynamoDB registry remains authoritative inventory before the first run;
 execution summaries are best effort, and native task history resolves gaps.

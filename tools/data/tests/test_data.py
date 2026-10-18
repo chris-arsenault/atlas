@@ -1,4 +1,6 @@
 import hashlib
+import shutil
+from pathlib import Path
 
 import boto3
 import pytest
@@ -8,6 +10,7 @@ from shapely.geometry import Polygon, mapping
 from atlas_data.build import validate_dating
 from atlas_data.catalogue import ancestry, subject
 from atlas_data.geography import normalized_geometry
+from atlas_data.inputs import capture_local
 from atlas_data.io import digest, fetch, write_json
 from atlas_data.publish import publish
 
@@ -61,12 +64,20 @@ def test_failed_publication_preserves_channel_and_retry_is_safe(tmp_path):
         Bucket="atlas-data-test", Key="published/data/v1/channel.json", Body=b"previous"
     )
     write_json(tmp_path / "catalogue.json", [{"id": "beng1280"}])
+    provenance = capture_local(Path(__file__).resolve().parents[3], tmp_path / "inputs")
+    shutil.move(tmp_path / "inputs/inputs.json", tmp_path / "inputs/manifest.json")
     write_json(
         tmp_path / "manifest.json",
         {
             "schema": 1,
+            "dataContract": "calendar-v1",
+            "inputs": provenance,
             "release": "content-id",
-            "artifacts": {"catalogue.json": {"sha256": digest(tmp_path / "catalogue.json")}},
+            "artifacts": {
+                str(path.relative_to(tmp_path)): {"sha256": digest(path)}
+                for path in tmp_path.rglob("*")
+                if path.is_file()
+            },
         },
     )
 

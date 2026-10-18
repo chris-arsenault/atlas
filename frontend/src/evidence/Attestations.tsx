@@ -21,7 +21,7 @@ export function Attestations({ model }: { model: WorkspaceModel }) {
             <p>{datingLabel(claim.dating)}</p>
             <p>{claim.note}</p>
             <p className="claim-state">
-              {activeDate(claim.dating, model.state.year, model.state.clock)
+              {activeDate(claim.dating, model.state.year)
                 ? "Within this proposed date interval"
                 : "Outside this proposed date interval"}
             </p>

@@ -1,28 +1,11 @@
 import type { WorkspaceModel } from "../atlas/useWorkspace";
 import { variantLabel } from "./time";
+import { firstYear, referenceYear } from "../atlas/state";
 
 export function TimeControls({ model }: { model: WorkspaceModel }) {
   return (
     <div className="time-controls">
-      <label>
-        Time scale
-        <select
-          aria-label="Historical time scale"
-          value={model.state.clock}
-          onChange={(event) =>
-            model.dispatch({
-              type: "patch",
-              patch: {
-                clock: event.target.value as "calendar" | "model",
-                year: event.target.value === "model" ? 2000 : 1000,
-              },
-            })
-          }
-        >
-          <option value="calendar">Calendar years</option>
-          <option value="model">Source model years</option>
-        </select>
-      </label>
+      <DateEntry model={model} />
       <label>
         Source / alternative
         <select
@@ -40,7 +23,16 @@ export function TimeControls({ model }: { model: WorkspaceModel }) {
           ))}
         </select>
       </label>
-      <DateEntry model={model} />
+      <label>
+        <input
+          type="checkbox"
+          checked={model.state.ancestry}
+          onChange={(event) =>
+            model.dispatch({ type: "patch", patch: { ancestry: event.target.checked } })
+          }
+        />{" "}
+        Ancestry links
+      </label>
       <label>
         <input
           type="checkbox"
@@ -55,20 +47,6 @@ export function TimeControls({ model }: { model: WorkspaceModel }) {
   );
 }
 function DateEntry({ model }: { model: WorkspaceModel }) {
-  if (model.state.clock === "model")
-    return (
-      <label>
-        Model age
-        <input
-          aria-label="Source model age"
-          type="number"
-          min="0"
-          max="14000"
-          value={model.state.year}
-          onChange={(event) => updateYear(model, event.target.value, 0, 14000)}
-        />
-      </label>
-    );
   const bce = model.state.year <= 0;
   const civil = bce ? 1 - model.state.year : model.state.year;
   return (
@@ -78,9 +56,11 @@ function DateEntry({ model }: { model: WorkspaceModel }) {
         aria-label="Calendar year"
         type="number"
         min="1"
-        max={bce ? 3000 : 2026}
+        max={bce ? 1 - firstYear : referenceYear}
         value={civil}
-        onChange={(event) => updateYear(model, event.target.value, 1, bce ? 3000 : 2026, bce)}
+        onChange={(event) =>
+          updateYear(model, event.target.value, 1, bce ? 1 - firstYear : referenceYear, bce)
+        }
       />
       <select
         aria-label="Calendar era"
@@ -88,7 +68,12 @@ function DateEntry({ model }: { model: WorkspaceModel }) {
         onChange={(event) =>
           model.dispatch({
             type: "patch",
-            patch: { year: event.target.value === "BCE" ? 1 - civil : civil },
+            patch: {
+              year: Math.max(
+                firstYear,
+                Math.min(referenceYear, event.target.value === "BCE" ? 1 - civil : civil)
+              ),
+            },
           })
         }
       >

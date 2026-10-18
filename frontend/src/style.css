@@ -200,44 +200,6 @@ select {
 .search-results p {
   padding: 12px;
 }
-.workspace-controls {
-  min-height: 62px;
-  flex-shrink: 0;
-  padding: 12px 28px;
-  display: flex;
-  align-items: center;
-  gap: 23px;
-  border-bottom: 1px solid var(--line);
-  font-size: 12px;
-}
-.workspace-controls label {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  color: var(--muted);
-}
-.workspace-controls select {
-  font-size: 12px;
-  color: var(--ink);
-}
-.map-options {
-  display: contents;
-}
-.map-options-toggle {
-  display: none;
-}
-.workspace-count {
-  margin-left: auto;
-  color: var(--muted);
-  font-variant-numeric: tabular-nums;
-}
-.toggle {
-  background: transparent;
-}
-.toggle.active {
-  background: #dceade;
-  border-color: #91b6a5;
-}
 .workspace {
   order: 1;
   display: flex;
@@ -427,22 +389,6 @@ select {
 .classification-status {
   color: var(--muted);
 }
-.empty-details {
-  max-height: 45%;
-  padding: 24px;
-}
-.empty-details h2 {
-  font-size: 29px;
-}
-.empty-details p {
-  font-size: 12px;
-}
-.source-warning {
-  margin-top: 12px;
-  padding-top: 12px;
-  border-top: 1px solid var(--line);
-  color: #7f664a;
-}
 .ancestry ol {
   list-style: none;
   margin: 13px 0;
@@ -531,14 +477,77 @@ select {
   text-underline-offset: 4px;
 }
 .timeline {
-  order: 3;
+  order: 0;
   border-top: 1px solid var(--line);
   padding: 17px 28px 11px;
   background: #f0efe5;
   flex-shrink: 0;
 }
 .timeline-options-toggle {
+  display: block;
+}
+.timeline-rail {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+.timeline-rail .timeline-heading {
+  flex: 1;
+}
+.timeline-options {
   display: none;
+}
+.timeline.options-open .timeline-options {
+  display: block;
+}
+.timeline .coverage-chart {
+  height: 24px;
+  margin: 2px 0 0;
+}
+.timeline .events {
+  margin-top: 8px;
+}
+.current-evidence {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.current-evidence:empty {
+  display: none;
+}
+.current-evidence label {
+  font-size: 12px;
+}
+.current-evidence select {
+  max-width: min(460px, 100%);
+}
+.event-browser {
+  margin-top: 8px;
+  font-size: 12px;
+}
+.event-browser select {
+  max-width: 100%;
+}
+.active-event-count {
+  font-size: 11px;
+  color: var(--muted);
+}
+.evidence-entry {
+  font-size: 12px;
+}
+.coverage-gap button {
+  margin-left: 10px;
+  font-size: 12px;
+}
+.source-records {
+  margin-top: 20px;
+  font-size: 12px;
+}
+.source-records button {
+  max-width: 100%;
+  overflow-wrap: anywhere;
 }
 .timeline-date-short {
   display: none;
@@ -684,16 +693,6 @@ dialog::backdrop {
     gap: 18px;
     padding-inline: 18px;
   }
-  .workspace-controls {
-    padding-inline: 18px;
-    gap: 12px;
-  }
-  .workspace-controls label {
-    gap: 6px;
-  }
-  .workspace-count {
-    display: none;
-  }
   .tree-pane {
     min-width: 290px;
   }
@@ -729,34 +728,6 @@ dialog::backdrop {
     order: 3;
     flex-basis: 100%;
     max-width: none;
-  }
-  .workspace-controls {
-    flex-wrap: wrap;
-    gap: 8px;
-    padding: 10px 12px;
-  }
-  .workspace-controls label {
-    font-size: 10px;
-  }
-  .workspace-controls select {
-    max-width: 180px;
-    font-size: 16px;
-  }
-  .workspace-controls button {
-    font-size: 12px;
-    min-height: 40px;
-  }
-  .map-options-toggle {
-    display: block;
-  }
-  .map-options {
-    display: none;
-  }
-  .map-options.expanded {
-    display: flex;
-    flex-wrap: wrap;
-    flex-basis: 100%;
-    gap: 8px;
   }
   .mobile-tabs {
     display: flex;
@@ -845,9 +816,32 @@ dialog::backdrop {
     flex: 1;
     margin-bottom: 6px;
   }
-  .timeline-heading p,
   .timeline-date-long {
     display: none;
+  }
+  .timeline-heading {
+    display: block;
+  }
+  .timeline-heading p {
+    display: block;
+    white-space: nowrap;
+    margin-top: 5px;
+  }
+  .timeline-evidence {
+    display: none;
+  }
+  .timeline.options-open .timeline-evidence {
+    display: block;
+  }
+  .timeline .clock-note {
+    display: none;
+  }
+  .timeline .current-evidence select {
+    width: 100%;
+    font-size: 16px;
+  }
+  .timeline .current-evidence label {
+    width: 100%;
   }
   .timeline-date-short {
     display: inline;
@@ -886,7 +880,7 @@ dialog::backdrop {
     font-size: 19px;
   }
   .timeline-heading p {
-    max-width: 150px;
+    max-width: none;
     font-size: 10px;
   }
   .timeline-heading button {
@@ -994,22 +988,6 @@ dialog::backdrop {
 }
 .events select {
   max-width: min(650px, 80vw);
-}
-.event-markers {
-  display: flex;
-  gap: 3px;
-  overflow-x: auto;
-  max-height: 30px;
-  margin-top: 6px;
-}
-.event-markers button {
-  font-size: 10px;
-  padding: 2px 5px;
-  color: #916541;
-  flex: none;
-}
-.event-markers button[aria-pressed="true"] {
-  background: #e6d2ae;
 }
 .event-details {
   max-width: 900px;

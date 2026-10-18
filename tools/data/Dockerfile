@@ -11,7 +11,6 @@ RUN pip install --no-cache-dir uv==0.12.3 \
  && pip install --no-cache-dir --require-hashes --no-deps --target /package -r /build/requirements.txt
 COPY tools/data/atlas_data /package/atlas_data
 COPY tools/data/uv.lock /package/tools/data/uv.lock
-COPY data /package/data
 RUN mkdir -p /package/bin /package/lib \
  && cp /build/tippecanoe-2.79.0/tippecanoe /package/bin/ \
  && strip /package/bin/tippecanoe \
@@ -26,6 +25,7 @@ COPY --from=build /lambda.zip /tmp/lambda.zip
 RUN python -m zipfile -e /tmp/lambda.zip /var/task && chmod 755 /var/task/bin/tippecanoe
 ENV PATH="/var/task/bin:/var/lang/bin:/usr/local/bin:/usr/bin:/bin" LD_LIBRARY_PATH="/var/task/lib:/var/lang/lib:/lib64:/usr/lib64:/var/runtime:/var/task" TIPPECANOE_MAX_THREADS=2
 RUN python -c "from pathlib import Path; from atlas_data.build import build_fingerprint; assert len(build_fingerprint(Path('/var/task'))) == 64"
+RUN test ! -e /var/task/data
 RUN python -c "import atlas_data.worker; from pathlib import Path; from tempfile import TemporaryDirectory; from atlas_data.io import write_json; from atlas_data.tiles import compile_tiles; t=TemporaryDirectory(); p=Path(t.name); write_json(p/'point.json', {'type':'FeatureCollection','features':[{'type':'Feature','properties':{},'geometry':{'type':'Point','coordinates':[0,0]}}]}); compile_tiles({'test':p/'point.json'},p/'test.pmtiles',0)"
 
 FROM scratch AS package

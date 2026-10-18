@@ -4,6 +4,7 @@ import {
   nodeSchema,
   observationSchema,
   historySchema,
+  detailSchema,
   type Release,
 } from "./schema";
 
@@ -27,7 +28,12 @@ export async function loadRelease(signal: AbortSignal): Promise<Release> {
   const channel = channelSchema.parse(await staticJson("/data/v1/channel.json", signal));
   if (!/^\/data\/v1\/releases\/[a-f0-9]{24}\/manifest\.json$/.test(channel.manifest))
     throw new Error("Unsupported dataset channel path");
-  const manifest = manifestSchema.parse(await staticJson(channel.manifest, signal, channel.sha256));
+  const rawManifest = await staticJson(channel.manifest, signal, channel.sha256);
+  if (z.object({ dataContract: z.literal("calendar-v1") }).safeParse(rawManifest).success === false)
+    throw new Error(
+      "This dataset needs an independent pipeline refresh before it can be displayed."
+    );
+  const manifest = manifestSchema.parse(rawManifest);
   const base = channel.manifest.replace("manifest.json", "");
   if (!base.endsWith(`${manifest.release}/`)) throw new Error("Dataset release identity mismatch");
   const artifact = (name: string) =>
@@ -54,5 +60,6 @@ export async function loadDetail(release: Release, id: string, signal: AbortSign
     signal,
     release.manifest.artifacts[name].sha256
   );
-  return z.record(z.string(), z.unknown()).parse(details)[id];
+  const detail = z.record(z.string(), z.unknown()).parse(details)[id];
+  return detailSchema.parse(detail);
 }

@@ -6,10 +6,12 @@ import tempfile
 from pathlib import Path
 
 import boto3
+from botocore.exceptions import ClientError
 
 from .build import assemble, layer, prepare
 from .history import source_list
-from .io import digest
+from .inputs import capture_remote, resolve_revision, snapshot_id, verify_snapshot
+from .io import digest, encode
 from .publish import publish
 from .telemetry import observe
 
@@ -51,15 +53,71 @@ def download_tree(client, bucket, directory, prefix):
             client.download_file(bucket, entry["Key"], str(destination))
 
 
+def stored_json(client, bucket, key):
+    import json
+
+    try:
+        return json.loads(client.get_object(Bucket=bucket, Key=key)["Body"].read())
+    except ClientError as error:
+        if error.response["Error"]["Code"] != "NoSuchKey":
+            raise
+        return None
+
+
+def pin_json(client, bucket, key, value):
+    """A retry or redrive keeps the first resolved input revision for this run."""
+    try:
+        client.put_object(Bucket=bucket, Key=key, Body=encode(value), IfNoneMatch="*")
+    except ClientError as error:
+        if error.response["Error"]["Code"] != "PreconditionFailed":
+            raise
+    return stored_json(client, bucket, key)
+
+
+def authored_inputs(client, bucket, prefix, root, event):
+    pointer = stored_json(client, bucket, f"{prefix}/inputs.json")
+    if pointer is None and event["stage"] == "fetch":
+        revision_key = f"{prefix}/revision.json"
+        pinned = stored_json(client, bucket, revision_key)
+        if pinned is None:
+            repository = os.environ["INPUT_REPOSITORY"]
+            revision = event.get("input", {}).get("revision", os.environ["INPUT_REVISION"])
+            pinned = pin_json(
+                client,
+                bucket,
+                revision_key,
+                {
+                    "repository": repository,
+                    "requestedRevision": revision,
+                    "commit": resolve_revision(repository, revision),
+                },
+            )
+        manifest = capture_remote(root, pinned["repository"], pinned["commit"])
+        identifier = snapshot_id(manifest)
+        upload_tree(client, bucket, root, f"sources/authored/{identifier}")
+        pointer = pin_json(client, bucket, f"{prefix}/inputs.json", {"snapshot": identifier})
+    elif pointer is None:
+        raise ValueError("Run has no captured authored inputs")
+    # Always consume the stored snapshot, including when this invocation captured it.
+    download_tree(client, bucket, root, f"sources/authored/{pointer['snapshot']}")
+    manifest = verify_snapshot(root)
+    if snapshot_id(manifest) != pointer["snapshot"]:
+        raise ValueError("Authored-input snapshot identity mismatch")
+    return manifest
+
+
 def stage(event):
-    root = Path(os.environ.get("ATLAS_ROOT", "/var/task"))
+    code_root = Path(os.environ.get("ATLAS_ROOT", "/var/task"))
     client, bucket = boto3.client("s3"), os.environ["DATA_BUCKET"]
     run = hashlib.sha256(event["run"].encode()).hexdigest()
     prefix = f"staging/{run}"
     with tempfile.TemporaryDirectory() as temporary:
         base = Path(temporary)
         cache, work, output = base / "sources", base / "work", base / "data"
+        root = base / "inputs"
         cache.mkdir()
+        if event["stage"] in ("fetch", "layer", "assemble"):
+            authored_inputs(client, bucket, f"sources/runs/{run}", root, event)
         if event["stage"] == "fetch":
             prepare(root, cache)
             for source in source_list(root):
@@ -87,7 +145,7 @@ def stage(event):
             return {"run": event["run"], "layer": event["layer"], "counts": counts}
         if event["stage"] == "assemble":
             download_tree(client, bucket, work, f"{prefix}/layers")
-            directory = assemble(root, cache, work, output)
+            directory = assemble(root, cache, work, output, code_root=code_root)
             upload_tree(client, bucket, directory, f"{prefix}/release")
             return {"run": event["run"], "release": directory.name}
         if event["stage"] == "publish":

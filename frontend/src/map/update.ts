@@ -1,24 +1,22 @@
-import type { FilterSpecification, GeoJSONSource, Map, VectorTileSource } from "maplibre-gl";
+import type { FilterSpecification, GeoJSONSource, Map } from "maplibre-gl";
 import type { WorkspaceModel } from "../atlas/useWorkspace";
-import { archiveUrl, emptyFeatures } from "./style";
+import { emptyFeatures } from "./style";
+import { referenceYear } from "../atlas/state";
 import { ancestryFeatures, eventFeatures } from "./overlays";
 
-export function displayLevel(model: WorkspaceModel, map: Map) {
-  const detail = model.state.detail;
-  if (detail !== "auto") return detail === "dialects" ? "areas" : detail;
+export function displayLevel(_model: WorkspaceModel, map: Map) {
   if (map.getZoom() < 2.7) return "families";
   return map.getZoom() < 4.7 ? "branches" : "areas";
 }
 export function updateAreas(map: Map, model: WorkspaceModel) {
   const { state, view } = model;
-  const historical = state.layer === "historical";
   const level = displayLevel(model, map);
   const subjects = view?.subjects ?? [];
   const highlight: FilterSpecification = ["in", ["get", "subject"], ["literal", subjects]];
   const allowed = view?.observations.map((row) => row.id) ?? [];
-  updateSource(map, model);
+  const hasAreas = state.year === referenceYear;
   for (const name of ["families", "branches", "areas"]) {
-    const visible = !historical && level === name;
+    const visible = hasAreas && level === name;
     map.setLayoutProperty(name, "visibility", visible ? "visible" : "none");
     map.setLayoutProperty(`${name}-selected`, "visibility", visible ? "visible" : "none");
     map.setFilter(`${name}-selected`, highlight);
@@ -34,18 +32,10 @@ export function updateAreas(map: Map, model: WorkspaceModel) {
   (map.getSource("ancestry") as GeoJSONSource).setData(ancestryFeatures(model));
   (map.getSource("events") as GeoJSONSource).setData(eventFeatures(model));
 }
-function updateSource(map: Map, model: WorkspaceModel) {
-  if (model.state.layer === "historical") return;
-  const source = map.getSource("areas") as VectorTileSource;
-  const url = archiveUrl(model.release, `${model.state.layer}.pmtiles`);
-  if (source.url !== url) source.setUrl(url);
-}
 function areaFilter(model: WorkspaceModel, level: string, allowed: string[]): FilterSpecification {
   if (level === "areas") {
     const includes: FilterSpecification = ["in", ["get", "id"], ["literal", allowed]];
-    return model.state.detail === "dialects"
-      ? ["all", includes, ["==", ["get", "kind"], "dialect"]]
-      : includes;
+    return includes;
   }
   if (!model.state.evidence.includes("map-derived")) return ["==", ["get", "subject"], ""];
   if (!model.state.family) return true;
@@ -56,7 +46,7 @@ function areaFilter(model: WorkspaceModel, level: string, allowed: string[]): Fi
   return ["in", ["get", "subject"], ["literal", isolated]];
 }
 function locationFeatures(model: WorkspaceModel): GeoJSON.FeatureCollection {
-  if (model.state.layer === "historical") return historicalFeatures(model, false);
+  if (model.state.year !== referenceYear) return historicalFeatures(model, false);
   const selected = model.state.selected ? model.nodes.get(model.state.selected) : null;
   if (!selected?.point) return emptyFeatures;
   return {
@@ -71,7 +61,7 @@ function locationFeatures(model: WorkspaceModel): GeoJSON.FeatureCollection {
   };
 }
 function historicalUncertainty(model: WorkspaceModel) {
-  return model.state.layer === "historical" ? historicalFeatures(model, true) : emptyFeatures;
+  return historicalFeatures(model, true);
 }
 function historicalFeatures(
   model: WorkspaceModel,

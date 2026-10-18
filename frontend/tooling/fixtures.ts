@@ -7,9 +7,12 @@ import type { History, Languoid, ObservationDetail, Dating } from "../src/data/s
 const output = resolve("../.cache/browser-fixtures", process.env.BROWSER ?? "local");
 const dating: Dating = {
   kind: "uncertain",
-  clock: "model",
-  start: 763,
-  end: 1600,
+  clock: "calendar",
+  start: 400,
+  end: 1237,
+  year: 856,
+  sourceCalendarEpoch: 2000,
+  sourceAgeInterval: [763, 1600],
   sourceMedianAge: 1144,
 };
 function node(id: string, name: string, parent: string | null = null): Languoid {
@@ -69,7 +72,15 @@ function catalogue(): Languoid[] {
         glottocode: "beng1280",
         variant,
         point: variant === "bouckaert" ? [90, 24] : null,
-        dating: { kind: "uncertain", clock: "model", start: 0, end: 0, sourceMedianAge: 0 },
+        dating: {
+          kind: "uncertain",
+          clock: "calendar",
+          start: 2000,
+          end: 2000,
+          year: 2000,
+          sourceMedianAge: 0,
+          sourceCalendarEpoch: 2000,
+        },
       },
     ]),
   ];
@@ -183,6 +194,7 @@ export function prepareFixture() {
   }
   const manifest = {
     schema: 1,
+    dataContract: "calendar-v1",
     release,
     artifacts,
     sources: [
@@ -198,7 +210,7 @@ export function prepareFixture() {
       historicalObservations: 1,
       variants: ["bouckaert", "chang"],
       gaps: ["Synthetic browser fixture only."],
-      dateSystem: "Synthetic calendar/model intervals",
+      dateSystem: "astronomical years; inclusive intervals",
     },
   };
   const content = JSON.stringify(manifest);

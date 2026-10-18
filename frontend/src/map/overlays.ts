@@ -4,7 +4,7 @@ import { acceptsClaim } from "../timeline/events";
 import type { Languoid } from "../data/schema";
 
 export function ancestryFeatures(model: WorkspaceModel): GeoJSON.FeatureCollection {
-  if (!model.state.ancestry || model.state.layer !== "historical") return empty();
+  if (!model.state.ancestry) return empty();
   const selected = selectedAncestry(model);
   return {
     type: "FeatureCollection",
@@ -13,7 +13,7 @@ export function ancestryFeatures(model: WorkspaceModel): GeoJSON.FeatureCollecti
         (claim) =>
           acceptsClaim(claim, model.state) &&
           (!selected || selected.has(`${claim.parent}>${claim.child}`)) &&
-          activeDate(claim.dating, model.state.year, model.state.clock)
+          activeDate(claim.dating, model.state.year)
       )
       .flatMap((claim) => {
         const parent = model.nodes.get(claim.parent),
@@ -52,19 +52,13 @@ function addAncestors(node: Languoid, nodes: Map<string, Languoid>, edges: Set<s
   }
 }
 export function eventFeatures(model: WorkspaceModel): GeoJSON.FeatureCollection {
-  if (model.state.layer !== "historical") return empty();
   return {
     type: "FeatureCollection",
     features: model.release.history.events
       .filter(
-        (event) =>
-          acceptsClaim(event, model.state) &&
-          activeDate(event.dating, model.state.year, model.state.clock)
+        (event) => acceptsClaim(event, model.state) && activeDate(event.dating, model.state.year)
       )
-      .filter(
-        (event) =>
-          event.id === model.state.event || (model.state.contacts && event.kind === "contact")
-      )
+      .filter((event) => event.id === model.state.event)
       .flatMap((event) =>
         event.geometry
           ? [

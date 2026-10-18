@@ -6,6 +6,8 @@ import type { WorkspaceModel } from "../atlas/useWorkspace";
 import { addAreas, mapStyle } from "./style";
 import { updateAreas } from "./update";
 import { ancestryFeatures } from "./overlays";
+import { referenceYear } from "../atlas/state";
+import { activeDate } from "../atlas/index";
 
 export function MapPane({ model }: { model: WorkspaceModel }) {
   const container = useRef<HTMLDivElement>(null);
@@ -24,11 +26,10 @@ export function MapPane({ model }: { model: WorkspaceModel }) {
   useEffect(() => {
     if (!ready || !map.current) return;
     updateAreas(map.current, model);
-    map.current.setProjection({ type: model.state.globe ? "globe" : "mercator" });
   }, [ready, model]);
   useEffect(() => {
     if (ready && map.current) focusMap(map.current, latest.current);
-  }, [ready, model.state.selected, model.state.ancestry, model.state.layer, model.state.variant]);
+  }, [ready, model.state.selected, model.state.ancestry, model.state.variant]);
   return (
     <section className="map-pane" aria-label="Language geography">
       <div className="map-canvas" ref={container} />
@@ -48,7 +49,7 @@ export function MapPane({ model }: { model: WorkspaceModel }) {
 }
 function focusMap(map: MapLibre, model: WorkspaceModel) {
   const duration = matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 700;
-  if (model.state.ancestry && model.state.layer === "historical") {
+  if (model.state.ancestry) {
     const coordinates = ancestryFeatures(model).features.flatMap((feature) =>
       feature.geometry.type === "LineString" ? feature.geometry.coordinates : []
     );
@@ -62,8 +63,16 @@ function focusMap(map: MapLibre, model: WorkspaceModel) {
       });
     return;
   }
-  const point = model.state.selected ? model.nodes.get(model.state.selected)?.point : null;
+  const point = selectedPoint(model);
   if (point) map.flyTo({ center: point, zoom: Math.max(4.8, map.getZoom()), duration });
+}
+function selectedPoint(model: WorkspaceModel) {
+  const selected = model.state.selected ? model.nodes.get(model.state.selected) : null;
+  if (!selected) return null;
+  const located = selected.dating
+    ? activeDate(selected.dating, model.state.year)
+    : model.state.year === referenceYear;
+  return located ? selected.point : null;
 }
 function MapCaption({ model }: { model: WorkspaceModel }) {
   const ancestry = ancestryFeatures(model);
@@ -71,10 +80,11 @@ function MapCaption({ model }: { model: WorkspaceModel }) {
     <div className="map-caption">
       <span className="eyebrow">Geographic evidence</span>
       <p>
-        {model.state.layer === "historical"
-          ? "Source model locations and uncertainty contours; no historical territories."
-          : "Areas digitized from published maps. Boundaries are approximate."}
+        {model.state.year === referenceYear
+          ? "2007 Atlas reference map · approximate source boundaries."
+          : "Reconstructed locations · Indo-European coverage. Dotted contours show location uncertainty, not territories."}
       </p>
+      {!model.state.selected && <p>Select a point or area to inspect its sources.</p>}
       {model.state.ancestry && (
         <p>
           <span role="status">{ancestry.features.length} sourced ancestry links at this date.</span>{" "}
@@ -82,12 +92,6 @@ function MapCaption({ model }: { model: WorkspaceModel }) {
           routes.
           {!ancestry.features.length &&
             " No located ancestry is available for this selection, date and source."}
-        </p>
-      )}
-      {model.state.contacts && (
-        <p>
-          Contact events retain separate sources. Events without historical coordinates remain in
-          the event inspector.
         </p>
       )}
     </div>
@@ -138,7 +142,7 @@ function mountMap(
     const unique = [
       ...new Map(
         features
-          .filter((f) => f.properties.subject)
+          .filter((feature) => isActiveFeature(feature, latest.current))
           .map((f) => [f.properties.id ?? f.properties.subject, f])
       ).values(),
     ];
@@ -154,6 +158,18 @@ function mountMap(
     map.current = null;
   };
 }
+function isActiveFeature(feature: MapGeoJSONFeature, model: WorkspaceModel) {
+  if (!feature.properties.subject) return false;
+  if (feature.properties.id) {
+    return !!model.view?.observations.some((row) => row.id === String(feature.properties.id));
+  }
+  return (
+    model.state.year === referenceYear &&
+    model.state.evidence.includes("map-derived") &&
+    (!model.state.family ||
+      model.nodes.get(String(feature.properties.subject))?.family === model.state.family)
+  );
+}
 function OverlapPicker({
   model,
   choices,
@@ -163,12 +179,14 @@ function OverlapPicker({
   choices: MapGeoJSONFeature[];
   close: () => void;
 }) {
+  const activeChoices = choices.filter((feature) => isActiveFeature(feature, model));
+  if (!activeChoices.length) return null;
   return (
     <aside className="overlap-picker" aria-label="Overlapping observations">
       <h3>Evidence at this location</h3>
       <p>These source claims overlap.</p>
       <ul>
-        {choices.map((feature) => (
+        {activeChoices.map((feature) => (
           <li key={String(feature.properties.id ?? feature.properties.subject)}>
             <button
               onClick={() => {

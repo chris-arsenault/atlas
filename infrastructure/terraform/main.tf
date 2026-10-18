@@ -100,6 +100,8 @@ module "worker" {
     DEPLOYMENT_ENVIRONMENT      = "production"
     TIPPECANOE_MAX_THREADS      = "4"
     ATLAS_ROOT                  = "/var/task"
+    INPUT_REPOSITORY            = "chris-arsenault/atlas"
+    INPUT_REVISION              = "main"
     PATH                        = "/var/task/bin:/var/lang/bin:/usr/local/bin:/usr/bin:/bin:/opt/bin"
     LD_LIBRARY_PATH             = "/var/task/lib:/var/lang/lib:/lib64:/usr/lib64:/var/runtime:/var/task:/opt/lib"
   }

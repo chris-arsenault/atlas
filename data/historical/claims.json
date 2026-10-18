@@ -1,4 +1,5 @@
 {
+  "schema":1,
   "sources":[{"id":"charyapada-banglapedia","citation":"Azhar Islam. Charyapada. Banglapedia, National Encyclopedia of Bangladesh. Entry revision 1392.","reference":"https://en.banglapedia.org/index.php?title=Charyapada&oldid=1392","license":"Factual claim metadata and citation only; source prose is not redistributed."},{"id":"thompson2012","citation":"Hanne-Ruth Thompson (2012). Bengali. John Benjamins, section 1.2, p. 3.","reference":"https://api.pageplace.de/preview/DT0400.9789027273130_A24763621/preview-9789027273130_A24763621.pdf","license":"Factual claim metadata and citation only; source prose is not redistributed."}],
   "entities":[],"observations":[],"relationships":[],
   "attestations":[

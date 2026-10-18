@@ -2,6 +2,7 @@ import argparse
 from pathlib import Path
 
 from .build import assemble, build, layer, prepare, validate_release
+from .inputs import capture_local, verify_snapshot
 
 
 def main():
@@ -13,12 +14,15 @@ def main():
     parser.add_argument("--output", type=Path, default=Path(".cache/site/data"))
     parser.add_argument("--layer", choices=("contemporary", "traditional"))
     args = parser.parse_args()
+    inputs = args.work / "inputs"
     if args.command == "fetch":
-        result = prepare(args.root, args.cache)
+        capture_local(args.root, inputs)
+        result = prepare(inputs, args.cache)
     elif args.command == "layer":
-        result = layer(args.root, args.cache, args.work, args.layer)
+        verify_snapshot(inputs)
+        result = layer(inputs, args.cache, args.work, args.layer)
     elif args.command == "assemble":
-        result = assemble(args.root, args.cache, args.work, args.output)
+        result = assemble(inputs, args.cache, args.work, args.output, code_root=args.root)
     elif args.command == "validate":
         result = validate_release(args.output)
     else:

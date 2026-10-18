@@ -48,10 +48,7 @@ it("searches aliases, reveals ancestry, and selects branches without changing th
   await expect
     .poll(() => document.querySelector(".tree-label.selected")?.textContent)
     .toBe("Bengali");
-  await page.getByRole("combobox", { name: "Source layer" }).selectOptions("traditional");
-  await expect
-    .element(page.getByRole("heading", { name: "Traditional reference periods" }))
-    .toBeVisible();
+  await expect.element(page.getByRole("heading", { name: "2007 CE" })).toBeVisible();
   await page
     .getByRole("navigation", { name: "Selected ancestry" })
     .getByRole("button", { name: "Indo-European", exact: true })
@@ -69,9 +66,9 @@ it("keeps languages without polygons and unsupported dates inspectable", async (
         .getByRole("heading", { name: "Sumerian", exact: true })
     )
     .toBeVisible();
-  await expect.element(page.getByText(/No available area for this selection/)).toBeVisible();
+  await expect.element(page.getByText(/No mapped evidence for this selection/)).toBeVisible();
   await expect.element(page.getByRole("heading", { name: "1 BCE", exact: true })).toBeVisible();
-  await expect.element(page.getByText(/No supported geographic observations/)).toBeVisible();
+  await expect.element(page.getByText(/No mapped evidence for this date/)).toBeVisible();
   await page.getByRole("button", { name: "Sources & coverage ↗" }).click();
   await expect.element(page.getByRole("dialog", { name: "Sources and coverage" })).toBeVisible();
   await page.getByRole("button", { name: "Close sources" }).click();
@@ -149,27 +146,25 @@ it("retains shared selection between mobile panes", async () => {
 it("exposes the timeline and source-backed geographic lineage on mobile", async () => {
   await page.viewport(390, 844);
   mount("?language=beng1280");
-  const explore = page.getByRole("button", { name: "Explore timeline" });
-  await expect.element(explore).toBeVisible();
+  await expect.element(page.getByRole("slider", { name: "Historical year" })).toBeVisible();
   const timeline = () => document.querySelector(".timeline")!.getBoundingClientRect();
   expect(timeline().bottom).toBeLessThan(innerHeight);
   expect(timeline().bottom).toBeLessThanOrEqual(
     document.querySelector(".workspace")!.getBoundingClientRect().top
   );
-  await explore.click();
   await expect.element(page.getByRole("slider", { name: "Historical year" })).toBeEnabled();
-  await page.getByRole("button", { name: "Lineage & dispersion", exact: true }).click();
+  const toggle = page.getByRole("button", { name: "Timeline options" });
+  await toggle.click();
+  await page.getByRole("spinbutton", { name: "Calendar year" }).fill("856");
+  await page.getByRole("checkbox", { name: "Dated genealogy" }).click();
+  await page.getByRole("checkbox", { name: "Ancestry links" }).click();
   await expect.element(page.getByText("1 sourced ancestry links at this date.")).toBeVisible();
   const params = () => new URLSearchParams(location.search);
-  expect(params().get("clock")).toBe("model");
-  expect(params().get("variant")).toBe("bouckaert");
-  expect(params().get("year")).toBe("1144");
-  const toggle = page.getByRole("button", { name: "Dates, sources & events" });
-  await expect.element(toggle).toHaveAttribute("aria-expanded", "false");
-  await page.getByRole("button", { name: "Previous boundary", exact: true }).click();
+  await expect.poll(() => params().get("year")).toBe("856");
+  expect(params().has("clock")).toBe(false);
+  await page.getByRole("spinbutton", { name: "Calendar year" }).fill("2007");
   await expect.element(page.getByText(/No located ancestry is available/)).toBeVisible();
-  await toggle.click();
-  await page.getByRole("spinbutton", { name: "Source model age" }).fill("1144");
+  await page.getByRole("spinbutton", { name: "Calendar year" }).fill("856");
   await expect.element(page.getByText("1 sourced ancestry links at this date.")).toBeVisible();
   await page.getByRole("combobox", { name: "Reconstruction variant" }).selectOptions("chang");
   await expect.element(page.getByText(/No located ancestry is available/)).toBeVisible();
@@ -185,17 +180,16 @@ it("exposes the timeline and source-backed geographic lineage on mobile", async 
   await search.fill("Sumerian");
   await page.getByRole("button", { name: /^Sumerian\s*language/ }).click();
   await expect.element(page.getByText(/No located ancestry is available/)).toBeVisible();
-  expect(params().get("language")).toBe("sume1241");
+  await expect.poll(() => params().get("language")).toBe("sume1241");
   expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(innerWidth);
 });
 it("keeps timeline entry points within a small phone viewport", async () => {
   await page.viewport(320, 568);
   mount();
-  await expect.element(page.getByRole("button", { name: "Explore timeline" })).toBeVisible();
+  await expect.element(page.getByRole("slider", { name: "Historical year" })).toBeVisible();
   expect(document.querySelector(".timeline")!.getBoundingClientRect().bottom).toBeLessThan(
     innerHeight
   );
-  await page.getByRole("button", { name: "Lineage & dispersion", exact: true }).click();
   await expect.element(page.getByRole("slider", { name: "Historical year" })).toBeEnabled();
   expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(innerWidth);
   document.querySelector(".map-pane")!.scrollIntoView();
@@ -217,24 +211,26 @@ it("provides actionable loading failures", async () => {
 it("distinguishes calendar attestations from source model geography and dated ancestry", async () => {
   mount("?language=beng1280&layer=historical&year=1000");
   await expect.element(page.getByRole("region", { name: "Textual attestations" })).toBeVisible();
-  await expect.element(page.getByText(/No supported geographic observations/)).toBeVisible();
-  await page.getByRole("combobox", { name: "Historical time scale" }).selectOptions("model");
-  await page.getByRole("spinbutton", { name: "Source model age" }).fill("1144");
+  await page.getByRole("button", { name: "Timeline options" }).click();
+  await page.getByRole("spinbutton", { name: "Calendar year" }).fill("856");
   await page.getByRole("combobox", { name: "Reconstruction variant" }).selectOptions("bouckaert");
   await page.getByRole("checkbox", { name: "Dated genealogy" }).click();
   await expect
-    .element(page.getByText("Source model ages · no asserted calendar epoch"))
+    .element(
+      page.getByText("Reconstructed divergence dates · BCE / CE · source uncertainty retained")
+    )
     .toBeVisible();
   await expect.poll(() => document.querySelectorAll(".node-date").length).toBeGreaterThan(0);
   await expect
-    .poll(() => document.querySelector(".workspace-count")?.textContent)
-    .not.toBe("0 observations");
+    .element(page.getByRole("combobox", { name: "Mapped evidence at this date" }))
+    .toBeVisible();
   await page.getByRole("combobox", { name: "Reconstruction variant" }).selectOptions("chang");
-  await expect.element(page.getByText(/No supported geographic observations/)).toBeVisible();
+  await expect.element(page.getByText(/No mapped evidence for this date/)).toBeVisible();
   await expect.element(page.getByRole("heading", { name: "Bengali", exact: true })).toBeVisible();
 });
 it("connects sourced events to participants and steps through evidence gaps", async () => {
   mount("?language=beng1280&layer=historical&year=1000");
+  await page.getByText("Browse dated events (1)").click();
   await expect.element(page.getByRole("combobox", { name: "Historical event" })).toBeVisible();
   await page
     .getByRole("combobox", { name: "Historical event" })
@@ -250,15 +246,57 @@ it("connects sourced events to participants and steps through evidence gaps", as
         .getByRole("button", { name: "Bengali", exact: true })
     )
     .toBeVisible();
-  await page.getByRole("button", { name: "Contact evidence", exact: true }).click();
-  await page.getByRole("button", { name: "Globe", exact: true }).click();
-  await expect.poll(() => new URLSearchParams(location.search).get("globe")).toBe("1");
-  await page.getByRole("button", { name: "Globe", exact: true }).click();
-  await page.getByRole("button", { name: "Previous boundary", exact: true }).click();
+  await page.getByRole("button", { name: "Previous date", exact: true }).click();
   await expect.poll(() => new URLSearchParams(location.search).get("year")).toBe("1100");
-  await page.getByRole("button", { name: "Play evidence", exact: true }).click();
+  await page.getByRole("button", { name: "Play timeline", exact: true }).click();
   await page.getByRole("button", { name: "Pause playback", exact: true }).click();
   await expect
-    .element(page.getByRole("button", { name: "Play evidence", exact: true }))
+    .element(page.getByRole("button", { name: "Play timeline", exact: true }))
     .toBeVisible();
+});
+it("coalesces sustained scrubbing into a settled URL and keeps the final evidence", async () => {
+  mount("?year=1000");
+  await expect.element(page.getByRole("slider", { name: "Historical year" })).toBeVisible();
+  const writes = vi.spyOn(history, "replaceState");
+  const slider = document.querySelector<HTMLInputElement>('input[aria-label="Historical year"]')!;
+  const setValue = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")!.set!;
+  // More input events than WebKit permits history writes in ten seconds.
+  for (let index = 0; index < 180; index++) {
+    setValue.call(slider, String(600 + index));
+    slider.dispatchEvent(new Event("input", { bubbles: true }));
+    await new Promise((resolve) => setTimeout(resolve, 12));
+  }
+  await expect.element(page.getByRole("heading", { name: "779 CE", exact: true })).toBeVisible();
+  await expect.poll(() => new URLSearchParams(location.search).get("year")).toBe("779");
+  expect(writes.mock.calls.length).toBeLessThan(10);
+  await expect
+    .element(page.getByRole("combobox", { name: "Mapped evidence at this date" }))
+    .toBeVisible();
+  expect(document.querySelector('[role="alert"]')).toBe(null);
+});
+it("keeps exploration alive if the browser refuses a history write", async () => {
+  mount("?year=1000");
+  await expect.element(page.getByRole("slider", { name: "Historical year" })).toBeVisible();
+  vi.spyOn(history, "replaceState").mockImplementation(() => {
+    throw new DOMException("History write limit", "SecurityError");
+  });
+  await page.getByRole("button", { name: "Timeline options" }).click();
+  await page.getByRole("spinbutton", { name: "Calendar year" }).fill("856");
+  await new Promise((resolve) => setTimeout(resolve, 600));
+  await expect.element(page.getByRole("heading", { name: "856 CE", exact: true })).toBeVisible();
+  await expect
+    .element(page.getByRole("combobox", { name: "Mapped evidence at this date" }))
+    .toBeVisible();
+});
+it("cancels a pending URL save when browser navigation restores another date", async () => {
+  mount("?year=1000");
+  await expect.element(page.getByRole("slider", { name: "Historical year" })).toBeVisible();
+  await page.getByRole("button", { name: "Timeline options" }).click();
+  await page.getByRole("spinbutton", { name: "Calendar year" }).fill("856");
+  history.pushState(null, "", `${location.pathname}?year=1200&language=beng1280`);
+  window.dispatchEvent(new PopStateEvent("popstate"));
+  await expect.element(page.getByRole("heading", { name: "1200 CE", exact: true })).toBeVisible();
+  await new Promise((resolve) => setTimeout(resolve, 600));
+  expect(new URLSearchParams(location.search).get("year")).toBe("1200");
+  await expect.element(page.getByRole("heading", { name: "Bengali", exact: true })).toBeVisible();
 });

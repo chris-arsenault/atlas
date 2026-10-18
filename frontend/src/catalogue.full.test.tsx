@@ -57,7 +57,7 @@ it("loads the full pinned corpus and preserves geography, isolates, subgroup ass
     .toBeVisible();
   await search.fill("Sumerian");
   await page.getByRole("button", { name: /^Sumerian\s*language/ }).click();
-  await page.getByRole("combobox", { name: "Source layer" }).selectOptions("historical");
-  await expect.element(page.getByText(/No available area for this selection/)).toBeVisible();
-  await expect.element(page.getByText(/No supported geographic observations/)).toBeVisible();
+  await page.getByRole("button", { name: "Timeline options" }).click();
+  await page.getByRole("spinbutton", { name: "Calendar year" }).fill("1000");
+  await expect.element(page.getByText(/No mapped evidence for this selection/)).toBeVisible();
 });

@@ -1,4 +1,4 @@
-"""Source clocks and model variants stay distinct from calendar observations."""
+"""Normalize verified source epochs while retaining original model ages."""
 
 import collections
 import hashlib
@@ -24,13 +24,17 @@ def load_history(root, cache):
     result["accounting"] = {}
     result["clocks"] = {
         "calendar": {"unit": "astronomical calendar year"},
-        "model": {"unit": "years before each source model's present", "calendarEpoch": None},
     }
     with zipfile.ZipFile(cache / "glottolog.zip") as archive:
         known = {row["id"] for row in csv_rows(archive_read(archive, "languoid.csv"))}
     mappings = read_json(root / "data/mappings/glottolog.json")
     for source in read_json(root / "data/sources.lock.json").get("historicalSources", []):
-        imported = read_phylogeny(cache / source["file"], source["id"])
+        imported = read_phylogeny(cache / source["file"], source["id"], source.get("calendarEpoch"))
+        if source.get("calendarEpoch") is None:
+            result["clocks"]["model"] = {
+                "unit": "years before each source model's present",
+                "calendarEpoch": None,
+            }
         reconcile_taxa(imported, known, mappings)
         for kind in ("entities", "relationships", "observations"):
             result[kind].extend(imported[kind])
@@ -82,7 +86,7 @@ def reconcile_taxa(imported, known, mappings):
     imported["accounting"]["joins"] = dict(counts)
 
 
-def read_phylogeny(path, variant):
+def read_phylogeny(path, variant, calendar_epoch=None):
     with zipfile.ZipFile(path) as archive:
         taxa = {row["ID"]: row for row in csv_rows(archive_read(archive, "/cldf/languages.csv"))}
         tree = dendropy.Tree.get(
@@ -98,7 +102,7 @@ def read_phylogeny(path, variant):
         if node.taxon and taxon is None:
             raise ValueError(f"Unmapped tree taxon: {node.taxon.label}")
         annotation = {attribute.name: attribute.value for attribute in node.annotations}
-        dating = node_dating(annotation)
+        dating = node_dating(annotation, calendar_epoch)
         coordinate = model_point(annotation)
         identifier = identifiers[node]
         name = taxon["Name"] if taxon else ancestral_name(node)
@@ -129,7 +133,7 @@ def read_phylogeny(path, variant):
                     "child": identifier,
                     "source": variant,
                     "locator": f"cldf/summary.trees; descendant taxa: {','.join(sorted(leaf.taxon.label for leaf in node.leaf_iter()))}",
-                    "dating": node_dating(parent_annotation),
+                    "dating": node_dating(parent_annotation, calendar_epoch),
                     "evidence": "reconstructed",
                     "variant": variant,
                     "posterior": number(parent_annotation.get("posterior")),
@@ -147,14 +151,21 @@ def read_phylogeny(path, variant):
                         "tree": "cldf/summary.trees",
                         "clade": sorted(leaf.taxon.label for leaf in node.leaf_iter()),
                     },
-                    "rawDate": "source model years before an unspecified present",
+                    "rawDate": f"source model years before {calendar_epoch} CE"
+                    if calendar_epoch is not None
+                    else "source model years before an unspecified present",
                     "dating": dating,
                     "evidence": "reconstructed",
                     "variant": variant,
                     "geographicUncertainty": "Posterior summary location of a phylogenetic node, not a language territory. Source 80% HPD contours are separate geographic uncertainty.",
-                    "note": "Possible node date within the source 95% age HPD, not continuous occupation throughout that interval. Model time has no asserted calendar epoch.",
+                    "note": "Possible node date within the source age interval, not continuous occupation. "
+                    + (
+                        "Original model ages and the verified calendar epoch are retained in dating metadata."
+                        if calendar_epoch is not None
+                        else "Model time has no asserted calendar epoch."
+                    ),
                     "transformations": [
-                        "Source age HPD rounded outwards to whole model years for timeline filtering."
+                        "Source age interval rounded outwards to whole years for timeline filtering."
                     ],
                     "geometry": {"type": "Point", "coordinates": coordinate},
                     "uncertaintyGeometry": uncertainty_geometry(annotation),
@@ -196,7 +207,7 @@ def number(value):
     return None if value is None else float(value)
 
 
-def node_dating(annotation):
+def node_dating(annotation, calendar_epoch=None):
     interval = annotation.get("height_95%_HPD")
     median = number(annotation.get("height_median", annotation.get("height")))
     if interval:
@@ -205,15 +216,28 @@ def node_dating(annotation):
         low = high = median
     else:
         return {"kind": "undated", "clock": "model"}
-    return {
+    result = {
         "kind": "uncertain",
         "clock": "model",
-        "start": max(0, math.floor(low)),
-        "end": max(0, math.ceil(high)),
+        "start": math.floor(low),
+        "end": math.ceil(high),
         "label": "95% age HPD" if interval else "Source point estimate; uncertainty not supplied",
         "sourceAgeInterval": [low, high],
         "sourceMedianAge": median,
     }
+    if calendar_epoch is not None:
+        calendar_low = 0 if abs(low) < 1e-6 else low
+        calendar_high = 0 if abs(high) < 1e-6 else high
+        result.update(
+            clock="calendar",
+            start=math.floor(calendar_epoch - calendar_high),
+            end=math.ceil(calendar_epoch - calendar_low),
+            sourceCalendarEpoch=calendar_epoch,
+        )
+        if median is not None:
+            age = 0 if abs(median) < 1e-6 else median
+            result["year"] = math.floor(calendar_epoch - age + 0.5)
+    return result
 
 
 def model_point(annotation):

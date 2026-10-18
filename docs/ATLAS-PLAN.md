@@ -1,5 +1,111 @@
 # Historical language atlas implementation plan
 
+## Current contract: authored inputs and one calendar workspace — 2026-10-17
+
+Implementation plan: `aab8e314-4542-4aae-b1f5-17d0e21b7ddd`.
+The user approved capturing hand-authored data through the independent pipeline.
+This supersedes worker-bundled editorial input and browser compatibility
+conversions. Earlier milestone descriptions below record historical behavior.
+
+Authored claims, identifier mappings and the source lock are versioned source
+inputs in Git. CI validates them with fixtures. It never refreshes production
+data, uploads generated releases or advances the channel. The worker ZIP contains
+code, locked dependencies and the compiler, with no `data/` tree.
+
+Source capture resolves the configured public repository ref, or an execution's
+explicit revision, to a commit and persists that choice before file downloads.
+It checks and snapshots the three authored JSON inputs under `sources/authored/`
+with per-file SHA-256 values. Retries retain that commit. All later stages consume
+the verified captured snapshot alongside checksum-pinned public archives. A
+release preserves exact authored files and provenance as artifacts. Local builds
+capture working files and identify them as `working-tree`, with base commit and
+checksums, rather than presenting them as committed input.
+
+The producer owns source interpretation, calendar normalization, joins and
+validation. The static browser requires the published `calendar-v1` contract;
+it formats dates and queries evidence without source-lock imports, epoch
+conversion, rewritten notes or suppressed coverage gaps. Older incompatible
+releases require an independent pipeline refresh and produce a clear loading
+error until then. Commits and frontend deployments never perform that refresh.
+
+Retain one map, one BCE/CE timeline, source inspection, uncertainty, alternatives,
+and debounced URL persistence. Epoch citations live with captured input metadata
+and appear through the release, not hardcoded frontend corrections.
+
+### Unified workspace scope and source findings
+
+The current request replaces the separate Contemporary / Traditional / Dated
+history modes and calendar / model time selectors with one map and one BCE/CE
+timeline. Source identity, uncertainty, and alternative research remain available
+in evidence inspection. Static delivery and the independent data pipeline remain.
+Local implementation and validation are authorized; publication is not requested.
+
+Diagnosis of release `652803a2cccf995a6df2cebd` found 205 model locations,
+153 model divergences, two alternative Bengali attestation dates, and one calendar
+contact event. The calendar map was empty at every date. URL replacement ran on
+every state update and exceeded WebKit's history write limit when scrubbing.
+
+Settled design: one calendar date drives geography, coverage, events, and dated
+genealogy. Primary controls expose date and selection; source controls live under
+evidence options. Contemporary map evidence appears as a reference snapshot,
+never extrapolated into ancient territory. Undated traditional records remain
+inspectable as source material. Preserve every input row and original date.
+Resolve model epochs from primary publications or their calendar exports before
+calendar conversion. Missing epoch evidence remains a coverage limitation, not a
+license to silently subtract ages from an arbitrary year.
+
+Sulion root: `d46af7a5-824f-423a-88be-33bd692bc701`.
+Milestone: `d64b92ab-667d-4318-8dfc-eb6aa12b78df`; execution branch:
+`e2aea34f-4a39-4d03-a19d-15bc29246025`. Steps: source dates
+`f992d518-88ed-43d1-97f7-d7d93b460593`, workspace
+`6506bcfd-bcf0-4001-af8d-4191387cfb98`, validation
+`10b03a7f-b3ec-4ffb-981a-7637bb8da2de`.
+
+### U1 — Unified dated evidence and workspace
+
+Scope: repair dating and temporal queries; unify the map, timeline, event and
+selection flows; debounce URL persistence; retain sourced details and mobile use.
+Acceptance: one date representation and no map/source mode selector; available
+geography and non-geographic evidence are discoverable; unsupported intervals
+explain their coverage and link to evidence; repeated scrubbing does not crash,
+lose the final URL date, or apply an obsolete worker result.
+
+Execution expansion:
+
+1. Review primary source calendar calibrations; implement documented conversion
+   with original ages retained, temporal coverage, and meaningful date tests.
+2. Replace source modes with one calendar state and map composition; connect
+   timeline navigation to observations, attestations, events and source details;
+   coalesce URL writes and clean up pending work on navigation and unmount.
+3. Run fixture CI, browser journeys including sustained scrubbing and navigation
+   in WebKit, then build and inspect the full pinned release. Review desktop and
+   phone layout locally. Keep remaining source coverage explicit.
+
+Primary review resolved both source epochs to 2000 CE. Chang p. 195 footnote 1
+defines BP, and Table 8 equates English 0 BP with 2000 CE. Bouckaert's original
+supplementary KML places modern tips at `2000-06-01`. Source locators are recorded
+in `data/sources.lock.json`; original model ages remain in generated records.
+The prior unspecified-epoch conclusion below is superseded by this review,
+as are the original separate map/time modes. Those older phase notes remain as
+implementation history.
+
+URL persistence waits 400 ms after state settles,
+cancels on navigation/unmount, preserves history state and hash, and handles
+browser history quota errors without crashing exploration.
+
+The workspace now has one flat map, one BCE/CE timeline, coverage marks,
+date-consistent playback, written evidence and event inspection. Source and
+genealogy options sit under Date & evidence; the phone timeline stays compact.
+Event details use the selection inspector. Map click choices are checked against
+active records even while renderer filters settle. Undated traditional records
+remain accessible in source inspection. Earlier located evidence remains limited
+to the imported Indo-European research; no global ancient territories are claimed.
+
+Acceptance includes captured-revision retry behavior, input checksum failures,
+authored-source validation without downloads, a clean Lambda package, full local
+data generation, and browser journeys for repeated scrubbing, navigation and
+calendar evidence. Publication remains separate from local implementation.
+
 Build a static application that connects language geography, genealogy, and time.
 Serve the application and all data from a private S3 bucket through CloudFront.
 Search, filtering, spatial selection, tree traversal, and temporal queries run in

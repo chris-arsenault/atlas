@@ -1,6 +1,6 @@
 import { hierarchy, tree, type HierarchyPointNode } from "d3-hierarchy";
 import type { Languoid } from "../data/schema";
-import { datingLabel } from "../timeline/time";
+import { datingLabel, estimatedYear } from "../timeline/time";
 
 export interface TreeEntry {
   id: string;
@@ -48,20 +48,24 @@ function treeRoot(nodes: Map<string, Languoid>, selected: string | null, ancesto
 }
 function sourceDateLabel(node: Languoid | undefined) {
   if (!node?.dating) return "Undated";
-  const age = node.dating.sourceMedianAge;
-  return age == null
-    ? datingLabel(node.dating)
-    : `${Math.round(age).toLocaleString()} model yr (${node.dating.start}–${node.dating.end})`;
+  return datingLabel(node.dating);
 }
 function positionBySourceAge(root: HierarchyPointNode<TreeEntry>, nodes: Map<string, Languoid>) {
   const ages = root
     .descendants()
-    .map((node) => nodes.get(node.data.id)?.dating?.sourceMedianAge)
+    .map((node) => nodes.get(node.data.id)?.dating)
+    .filter((dating) => dating && dating.clock !== "model" && dating.kind !== "undated")
+    .map((dating) => estimatedYear(dating!))
     .filter((age): age is number => age != null);
-  const oldest = Math.max(1, ...ages);
+  const oldest = Math.min(0, ...ages);
+  const newest = Math.max(2007, ...ages);
   root.each((node) => {
-    const age = nodes.get(node.data.id)?.dating?.sourceMedianAge;
-    node.y = age == null ? 1050 + node.depth * 20 : ((oldest - age) / oldest) * 900;
+    const dating = nodes.get(node.data.id)?.dating;
+    const year =
+      dating && dating.clock !== "model" && dating.kind !== "undated"
+        ? estimatedYear(dating)
+        : null;
+    node.y = year == null ? 1050 + node.depth * 20 : ((year - oldest) / (newest - oldest)) * 900;
     if (node.data.id === "atlas:root") node.y = -20;
   });
 }

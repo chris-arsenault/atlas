@@ -5,25 +5,17 @@ import { detailSchema, type Languoid, type ObservationDetail } from "../data/sch
 import { ancestorIds } from "../tree/layout";
 import { Attestations } from "./Attestations";
 import { datingLabel } from "../timeline/time";
+import { referenceYear } from "../atlas/state";
+import { EventDetails } from "../timeline/Events";
+import { acceptsClaim } from "../timeline/events";
 
 export function Details({ model }: { model: WorkspaceModel }) {
   const node = model.state.selected ? model.nodes.get(model.state.selected) : null;
   const rows = model.view?.observations.filter((row) => row.subject === node?.id) ?? [];
-  if (!node)
-    return (
-      <aside className="details empty-details">
-        <span className="eyebrow">Explore a living record</span>
-        <h2>Language, place, and ancestry.</h2>
-        <p>
-          Select a distribution, choose a branch, or search the full catalogue. Every visible area
-          leads back to its source.
-        </p>
-        <p className="source-warning">
-          Traditional areas describe different reference periods. They are not a single historical
-          snapshot.
-        </p>
-      </aside>
-    );
+  const event = model.release.history.events.find(
+    (row) => row.id === model.state.event && acceptsClaim(row, model.state)
+  );
+  if (!node) return null;
   return (
     <aside className="details" aria-label="Selected language details">
       <div className="pane-heading">
@@ -40,6 +32,7 @@ export function Details({ model }: { model: WorkspaceModel }) {
         {node.status}
       </p>
       <Ancestry model={model} />
+      {event && <EventDetails event={event} model={model} />}
       <div className="detail-actions">
         <button onClick={() => model.dispatch({ type: "patch", patch: { family: node.family } })}>
           Isolate family
@@ -53,15 +46,15 @@ export function Details({ model }: { model: WorkspaceModel }) {
       )}
       <CatalogueDetails node={node} />
       <Attestations model={model} />
+      <SourceRecords model={model} node={node} />
     </aside>
   );
 }
 function MissingArea({ model, node }: { model: WorkspaceModel; node: Languoid }) {
   return (
     <p role="status">
-      No available area for this selection in this layer
-      {model.state.layer === "historical" ? " at this date" : ""}.
-      {node.point && model.state.layer !== "historical"
+      No mapped evidence for this selection at this date.
+      {node.point && model.state.year === referenceYear
         ? " The map shows a catalogue coordinate, not an inferred territory."
         : ""}
     </p>
@@ -158,10 +151,7 @@ function ObservationList({
   );
 }
 function EvidenceText({ detail }: { detail: ObservationDetail }) {
-  const date =
-    detail.dating.clock === "model"
-      ? datingLabel(detail.dating)
-      : detail.rawDate || "Undated source";
+  const date = datingLabel(detail.dating);
   return (
     <>
       <p>
@@ -169,6 +159,14 @@ function EvidenceText({ detail }: { detail: ObservationDetail }) {
       </p>
       <p>{detail.geographicUncertainty}</p>
       <p>{detail.note}</p>
+      {detail.dating.sourceCalendarEpoch != null && (
+        <p>
+          Calendar dates use the source&apos;s {detail.dating.sourceCalendarEpoch} CE epoch.
+          Original model age: {detail.dating.sourceMedianAge?.toLocaleString() ?? "not supplied"}{" "}
+          years; source interval: {detail.dating.sourceAgeInterval?.join("–") ?? "not supplied"}.
+          Date uncertainty does not establish continuous occupation.
+        </p>
+      )}
       {detail.posterior != null && (
         <p>
           Source clade posterior support: {detail.posterior.toFixed(3)}. Date and geography have
@@ -176,5 +174,41 @@ function EvidenceText({ detail }: { detail: ObservationDetail }) {
         </p>
       )}
     </>
+  );
+}
+function SourceRecords({ model, node }: { model: WorkspaceModel; node: Languoid }) {
+  const rows = model.release.observations.filter((row) => row.subject === node.id);
+  const related = model.release.nodes.filter(
+    (sample) => sample.glottocode === node.id && sample.id !== node.id
+  );
+  return (
+    <details className="source-records">
+      <summary>All source records ({rows.length}) & related reconstructions</summary>
+      <p>
+        Undated and traditional source records remain available here; they are not assigned calendar
+        territories.
+      </p>
+      {rows.map((row) => (
+        <p key={row.id}>
+          <button onClick={() => model.setFocusedObservation(row.id)}>
+            {row.layer === "traditional" ? "Traditional source" : row.id} ·{" "}
+            {datingLabel(row.dating)}
+          </button>
+        </p>
+      ))}
+      {model.focusedObservation &&
+        rows.some((row) => row.id === model.focusedObservation) &&
+        !model.view?.observations.some((row) => row.id === model.focusedObservation) && (
+          <ObservationList
+            model={model}
+            rows={rows.filter((row) => row.id === model.focusedObservation)}
+          />
+        )}
+      {related.map((sample) => (
+        <p key={sample.id}>
+          <button onClick={() => model.select(sample.id)}>{sample.name}</button>
+        </p>
+      ))}
+    </details>
   );
 }

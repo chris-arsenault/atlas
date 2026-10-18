@@ -1,22 +1,32 @@
-import type { AtlasState } from "../atlas/state";
-import { yearLabel } from "../atlas/state";
+import { yearLabel, firstYear, referenceYear } from "../atlas/state";
 import type { Dating } from "../data/schema";
 
-export function timeLabel(year: number, clock: AtlasState["clock"]) {
-  return clock === "model"
-    ? `${year.toLocaleString()} model years before present`
-    : yearLabel(year);
+export function timeLabel(year: number) {
+  return yearLabel(year);
 }
 export function datingLabel(dating: Dating): string {
   if (dating.kind === "undated") return "Undated";
-  const clock = dating.clock ?? "calendar";
-  if (dating.kind === "reference") return `Reference: ${timeLabel(dating.year!, clock)}`;
-  const start = dating.start == null ? "unknown" : timeLabel(dating.start, clock);
-  const end = dating.end == null ? "unknown" : timeLabel(dating.end, clock);
+  if (dating.clock === "model") return "Calendar date unavailable";
+  if (dating.kind === "reference") return `Reference: ${timeLabel(dating.year!)}`;
+  const start = dating.start == null ? "unknown" : timeLabel(dating.start);
+  const end = dating.end == null ? "unknown" : timeLabel(dating.end);
   return `${start} – ${end}`;
 }
-export function timelineBounds(clock: AtlasState["clock"]): [number, number] {
-  return clock === "model" ? [0, 14000] : [-2999, 2026];
+export function estimatedYear(dating: Dating) {
+  return dating.year ?? dating.start ?? dating.end ?? 0;
+}
+export function timelineBounds(): [number, number] {
+  return [firstYear, referenceYear];
+}
+export function dateBoundaries(rows: { dating: Dating }[]) {
+  const years = rows.flatMap(({ dating }) =>
+    dating.kind === "reference"
+      ? [dating.year]
+      : [dating.start, dating.end == null ? null : dating.end + 1]
+  );
+  return [...new Set([firstYear, referenceYear, ...years])]
+    .filter((year): year is number => year != null && year >= firstYear && year <= referenceYear)
+    .sort((a, b) => a - b);
 }
 export function variantLabel(variant: string) {
   const labels: Record<string, string> = {

@@ -43,3 +43,25 @@ it("uses SHA-256 byte identity", async () => {
     "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
   );
 });
+it("rejects older releases instead of converting their model dates in the browser", async () => {
+  const bytes = JSON.stringify({ schema: 1, release: "a".repeat(24) });
+  const checksum = await sha256(new TextEncoder().encode(bytes).buffer);
+  let requests = 0;
+  vi.stubGlobal(
+    "fetch",
+    async () =>
+      new Response(
+        ++requests === 1
+          ? JSON.stringify({
+              schema: 1,
+              manifest: `/data/v1/releases/${"a".repeat(24)}/manifest.json`,
+              sha256: checksum,
+            })
+          : bytes
+      )
+  );
+  await expect(loadRelease(new AbortController().signal)).rejects.toThrow(
+    "independent pipeline refresh"
+  );
+  expect(requests).toBe(2);
+});

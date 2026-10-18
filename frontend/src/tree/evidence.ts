@@ -31,7 +31,7 @@ export function genealogyContext(
     nodes: supported,
     selected: mapped,
     caption: dated
-      ? "Source model ages · no asserted calendar epoch"
+      ? "Reconstructed divergence dates · BCE / CE · source uncertainty retained"
       : "Source phylogeny · undated layout",
   };
 }

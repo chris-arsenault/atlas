@@ -4,7 +4,6 @@ import { loadRelease } from "./data/api";
 import type { Release } from "./data/schema";
 import { useWorkspace, type WorkspaceModel } from "./atlas/useWorkspace";
 import { Search } from "./atlas/Search";
-import { Controls, EvidenceControls } from "./atlas/Controls";
 import { MapPane } from "./map/MapPane";
 import { TreePane } from "./tree/TreePane";
 import { Details } from "./evidence/Details";
@@ -44,7 +43,6 @@ function Workspace({ release }: { release: Release }) {
   return (
     <main className="atlas-app">
       <Header model={model} openSources={() => setSources(true)} />
-      <Controls model={model} />
       <div className="mobile-tabs" role="group" aria-label="Workspace pane">
         <button aria-pressed={pane === "map"} onClick={() => setPane("map")}>
           Map
@@ -59,7 +57,6 @@ function Workspace({ release }: { release: Release }) {
         <TreePane model={model} />
         <Details model={model} />
       </div>
-      <EvidenceControls model={model} />
       {model.queryError && (
         <p role="alert">Catalogue queries unavailable. Reload to rebuild the index.</p>
       )}
@@ -123,9 +120,24 @@ function Sources({ model, close }: { model: WorkspaceModel; close: () => void })
               {source.version ? ` · release ${source.version}` : ""}
               {source.ingestion === "reviewed-editorial" ? " · reviewed editorial input" : ""}
             </p>
+            {typeof source.datingReference === "string" && (
+              <p>
+                <a href={source.datingReference} target="_blank" rel="noreferrer">
+                  Calendar dating reference
+                </a>
+                {typeof source.datingLocator === "string" ? ` · ${source.datingLocator}` : ""}
+              </p>
+            )}
           </li>
         ))}
       </ul>
+      <h3>Dates and coverage</h3>
+      <p>
+        The timeline displays published calendar dates as BCE and CE. Points and contours show
+        reconstructed node locations and uncertainty, not language territories. The 2007 endpoint
+        shows the Atlas reference map; undated traditional maps remain inspectable in each
+        language&apos;s source records.
+      </p>
       <h3>Known gaps</h3>
       <ul>
         {model.release.manifest.coverage.gaps.map((gap) => (

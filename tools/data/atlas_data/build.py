@@ -7,6 +7,7 @@ from pathlib import Path
 from .catalogue import load_catalogue, validate_hierarchy
 from .geography import import_layer
 from .history import load_history, source_list
+from .inputs import INPUT_FILES, capture_local, validate_inputs, verify_snapshot
 from .io import digest, encode, fetch, read_json, write_json
 from .tiles import compile_tiles, inspect_tiles
 
@@ -44,11 +45,17 @@ def layer(root: Path, cache: Path, work: Path, name: str):
     return read_json(work / name / "accounting.json")
 
 
-def assemble(root: Path, cache: Path, work: Path, destination: Path):
+def assemble(root: Path, cache: Path, work: Path, destination: Path, *, code_root=None):
+    inputs = verify_snapshot(root)
     stage = work / "release"
     if stage.exists():
         shutil.rmtree(stage)
     stage.mkdir(parents=True, exist_ok=True)
+    for name in INPUT_FILES:
+        target = stage / "inputs" / name
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(root / name, target)
+    shutil.copyfile(root / "inputs.json", stage / "inputs/manifest.json")
     nodes, observations, counts = {}, [], {}
     for name in LAYERS:
         for node in read_json(work / name / "nodes.json"):
@@ -73,11 +80,13 @@ def assemble(root: Path, cache: Path, work: Path, destination: Path):
     artifacts = {
         str(path.relative_to(stage)): {"sha256": digest(path), "bytes": path.stat().st_size}
         for path in sorted(stage.rglob("*"))
-        if path.is_file() and path.name != "manifest.json"
+        if path.is_file() and path != stage / "manifest.json"
     }
-    build_code = build_fingerprint(root)
+    build_code = build_fingerprint(code_root or root)
     manifest = {
         "schema": 1,
+        "dataContract": "calendar-v1",
+        "inputs": inputs,
         "build": build_code,
         "sources": list(
             {source["id"]: source for source in source_list(root) + history["sources"]}.values()
@@ -101,8 +110,8 @@ def assemble(root: Path, cache: Path, work: Path, destination: Path):
             "gaps": [
                 "Traditional is not a global date: contact-era Americas/Australia, contemporary proxies elsewhere.",
                 "Source maps do not exhaustively record multilingualism.",
-                "Undated and reference-only areas are excluded from historical mode.",
-                "Phylogenetic dates retain model years before an unspecified present. No calendar epoch is inferred.",
+                "Contemporary areas are a 2007 reference snapshot, not evidence of continuous occupation. Undated traditional areas remain source records, not calendar-dated territories.",
+                "Reconstructed node date intervals describe uncertainty, not continuous occupation. Calendar dating references and epochs remain attached to each source.",
                 "Calendar contact evidence is initially limited to Bengal. Migration, territorial expansion, language shift and extinction events lack reviewed source coverage.",
                 "Contact evidence without historical coordinates has no geographic route. Ancestry links connect model node estimates, not documented journeys.",
             ],
@@ -183,7 +192,7 @@ def validate_dating(dating):
 
 def validate_release(directory):
     manifest = read_json(directory / "manifest.json")
-    if manifest["schema"] != 1:
+    if manifest["schema"] != 1 or manifest.get("dataContract") != "calendar-v1":
         raise ValueError("Unsupported release schema")
     for name, artifact in manifest["artifacts"].items():
         path = directory / name
@@ -191,11 +200,28 @@ def validate_release(directory):
             raise ValueError(f"Release integrity failure: {name}")
         if path.suffix == ".pmtiles":
             inspect_tiles(path)
+    captured = directory / "inputs"
+    # Release artifact name differs from the run's inputs.json to stay self-describing.
+    inputs = read_json(captured / "manifest.json")
+    if inputs != manifest["inputs"]:
+        raise ValueError("Release input provenance mismatch")
+    if set(inputs["files"]) != set(INPUT_FILES):
+        raise ValueError("Unsupported release inputs")
+    for name, checksum in inputs["files"].items():
+        if f"inputs/{name}" not in manifest["artifacts"]:
+            raise ValueError(f"Release is missing captured input artifact: {name}")
+        if digest(captured / name) != checksum:
+            raise ValueError(f"Release input integrity failure: {name}")
+    if "inputs/manifest.json" not in manifest["artifacts"]:
+        raise ValueError("Release is missing input provenance artifact")
+    validate_inputs(captured)
     return manifest
 
 
 def build(root, cache, work, destination):
-    prepare(root, cache)
+    inputs_root = work / "inputs"
+    capture_local(root, inputs_root)
+    prepare(inputs_root, cache)
     for name in LAYERS:
-        layer(root, cache, work, name)
-    return assemble(root, cache, work, destination)
+        layer(inputs_root, cache, work, name)
+    return assemble(inputs_root, cache, work, destination, code_root=root)

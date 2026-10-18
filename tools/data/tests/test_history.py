@@ -11,6 +11,22 @@ def test_model_age_never_acquires_an_invented_calendar_epoch():
     assert dating["sourceMedianAge"] == 1200
 
 
+def test_verified_epoch_reverses_age_intervals_and_preserves_originals():
+    dating = node_dating({"height_95%_HPD": ["1000.2", "2400.8"], "height_median": "1200"}, 2000)
+    assert dating["clock"] == "calendar"
+    assert (dating["start"], dating["end"]) == (-401, 1000)
+    assert dating["sourceAgeInterval"] == [1000.2, 2400.8]
+    assert dating["sourceMedianAge"] == 1200
+    assert dating["sourceCalendarEpoch"] == 2000
+    assert dating["year"] == 800
+    present = node_dating({"height": "0.0000000001"}, 2000)
+    assert (present["start"], present["end"]) == (2000, 2000)
+    assert present["year"] == 2000
+    future = node_dating({"height": "-1.5"}, 2000)
+    assert (future["start"], future["end"]) == (2001, 2002)
+    assert future["sourceMedianAge"] == -1.5
+
+
 def test_retains_distinct_samples_and_sourced_model_geography(tmp_path):
     archive = tmp_path / "tree.zip"
     with zipfile.ZipFile(archive, "w") as output:

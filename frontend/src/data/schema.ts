@@ -10,6 +10,7 @@ export const datingSchema = z.object({
   label: z.string().optional(),
   sourceAgeInterval: z.tuple([z.number(), z.number()]).optional(),
   sourceMedianAge: z.number().nullable().optional(),
+  sourceCalendarEpoch: z.number().int().optional(),
 });
 export type Dating = z.infer<typeof datingSchema>;
 export const nodeSchema = z.object({
@@ -64,6 +65,7 @@ export const sourceSchema = z
   .passthrough();
 export const manifestSchema = z.object({
   schema: z.literal(1),
+  dataContract: z.literal("calendar-v1"),
   release: z.string().regex(/^[a-f0-9]{24}$/),
   sources: z.array(sourceSchema),
   artifacts: z.record(
